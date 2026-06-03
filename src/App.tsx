@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
-import { Search, Globe, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { 
+  Search, Globe, Phone, MapPin, AlertCircle, Wrench, Droplet, 
+  Sparkles, Cpu, Layers, Grid, Copy, Check, MessageSquare, Package 
+} from 'lucide-react';
 
 interface InventoryItem {
   id: string;
@@ -33,12 +36,21 @@ const CATEGORIES = {
   ]
 };
 
+const CATEGORY_ICONS: Record<string, any> = {
+  ALL: Grid,
+  SPARE_PARTS: Wrench,
+  OILS: Droplet,
+  ACCESSORIES: Sparkles,
+  TIRES: Cpu,
+  OTHER: Layers
+};
+
 const TRANSLATIONS = {
   ar: {
-    title: 'دليل قطع غيار QUICKAUTO',
+    title: 'دليل قطع غيار QUICK AUTO',
     subtitle: 'ابحث عن قطع الغيار والملحقات المتوفرة في مركزنا الفني مباشرة وبشفافية',
     searchPlaceholder: 'ابحث باسم القطعة، ماركتها، أو كود OEM...',
-    exchangeRateText: 'سعر الصرف المعتمد:',
+    exchangeRateText: 'سعر الصرف اليومي المعتمد:',
     currencySYP: 'ل.س',
     inStock: 'متوفر في المركز',
     outOfStock: 'غير متوفر مؤقتاً',
@@ -47,13 +59,21 @@ const TRANSLATIONS = {
     model: 'الموديل المتوافق:',
     code: 'كود القطعة (OEM):',
     phone: 'اتصال ومبيعات',
-    address: 'درعا - طريق دمشق - بجانب اتصالات درعا',
+    address: 'سوريا – درعا – المنطقة الصناعية – جنوب الحديقة',
     noResults: 'لم يتم العثور على قطع تطابق بحثك. يرجى مراجعة الاسم أو الكود.',
     loading: 'جاري تحميل دليل قطع الغيار...',
-    allRightsReserved: 'جميع الحقوق محفوظة. مركز كويك أوتو الفني'
+    allRightsReserved: 'جميع الحقوق محفوظة. مركز كويك أوتو الفني',
+    qtyAvailable: 'الكمية المتوفرة:',
+    pieces: 'قطع',
+    orderWhatsApp: 'طلب عبر واتساب',
+    totalParts: 'إجمالي القطع المتاحة',
+    totalCategories: 'الأقسام المتاحة',
+    lastUpdated: 'تحديث فوري ومباشر',
+    copy: 'نسخ الكود',
+    copied: 'تم النسخ!'
   },
   en: {
-    title: 'QUICKAUTO Spare Parts Catalog',
+    title: 'QUICK AUTO Spare Parts Catalog',
     subtitle: 'Search available parts, oils, and accessories in our center transparently',
     searchPlaceholder: 'Search by part name, brand, or OEM code...',
     exchangeRateText: 'Approved Exchange Rate:',
@@ -65,10 +85,18 @@ const TRANSLATIONS = {
     model: 'Model:',
     code: 'Part Code (OEM):',
     phone: 'Sales & Contact',
-    address: 'Daraa - Damascus Road - Next to Daraa Telecom',
+    address: 'Syria – Daraa – Industrial Area – South of the Park',
     noResults: 'No parts matched your search. Please check the name or code.',
     loading: 'Loading spare parts catalog...',
-    allRightsReserved: 'All Rights Reserved. QUICKAUTO Technical Center'
+    allRightsReserved: 'All Rights Reserved. QUICK AUTO Technical Center',
+    qtyAvailable: 'Available Qty:',
+    pieces: 'pcs',
+    orderWhatsApp: 'Order via WhatsApp',
+    totalParts: 'Total Items Available',
+    totalCategories: 'Categories',
+    lastUpdated: 'Live Database Sync',
+    copy: 'Copy Code',
+    copied: 'Copied!'
   }
 };
 
@@ -79,6 +107,7 @@ export default function App() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(15000); // Fallback rate
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const t = TRANSLATIONS[lang];
 
@@ -98,18 +127,21 @@ export default function App() {
         .maybeSingle();
       
       if (rateData && rateData.rate) {
-        setExchangeRate(rateData.rate / 100);
+        const rawRate = rateData.rate;
+        // Handle both Legacy (raw e.g. 15000) and New (100x e.g. 1500000) formats
+        if (rawRate > 100000) {
+          setExchangeRate(rawRate / 100);
+        } else {
+          setExchangeRate(rawRate);
+        }
       }
 
       // 2. Fetch inventory items from the secure public view (or table)
-      // Note: We use public_inventory_view if defined, otherwise we query inventory_items directly.
-      // We limit to active items.
       const { data: itemsData, error } = await supabase
         .from('public_inventory_view')
         .select('*');
 
       if (error) {
-        // Fallback if view is not created yet, fetch from table
         console.warn('Could not read from public_inventory_view, falling back to table:', error.message);
         const { data: fallbackData } = await supabase
           .from('inventory_items')
@@ -125,6 +157,12 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyCode = (id: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   // Filter items based on category and search text
@@ -144,25 +182,43 @@ export default function App() {
     });
   }, [items, search, selectedCategory]);
 
+  // General counts for Stats Cards
+  const totalStockCount = useMemo(() => {
+    return items.reduce((acc, item) => acc + (item.quantity > 0 ? item.quantity : 0), 0);
+  }, [items]);
+
+  const categoriesCount = useMemo(() => {
+    const activeCats = new Set(items.map(i => i.category || 'OTHER'));
+    return activeCats.size;
+  }, [items]);
+
   return (
     <div className="app-container" style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+      
+      {/* Background Decorative Blurs */}
+      <div className="background-decor blur-orb-1"></div>
+      <div className="background-decor blur-orb-2"></div>
+      <div className="background-decor blur-orb-3"></div>
+
       {/* Top Header Navigation */}
       <header className="navbar">
         <div className="navbar-brand">
           <span className="brand-quick">QUICK</span>
+          <span className="brand-space"> </span>
           <span className="brand-auto">AUTO</span>
         </div>
         
         <div className="navbar-actions">
           {/* Exchange Rate Badge */}
           <div className="rate-badge">
+            <span className="rate-indicator"></span>
             <span className="rate-label">{t.exchangeRateText}</span>
             <span className="rate-value">{exchangeRate.toLocaleString()} {t.currencySYP} / $</span>
           </div>
 
           {/* Language Toggle */}
           <button className="lang-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
-            <Globe size={18} />
+            <Globe size={16} />
             <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
           </button>
         </div>
@@ -170,8 +226,30 @@ export default function App() {
 
       {/* Hero Section */}
       <section className="hero">
+        <div className="live-pill">
+          <span className="pulse-dot"></span>
+          <span>{t.lastUpdated}</span>
+        </div>
         <h1 className="hero-title">{t.title}</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
+
+        {/* Stats Row */}
+        <div className="stats-row">
+          <div className="stat-box">
+            <Package size={20} className="stat-icon" />
+            <div className="stat-details">
+              <span className="stat-num">{totalStockCount.toLocaleString()}</span>
+              <span className="stat-label">{t.totalParts}</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <Layers size={20} className="stat-icon" />
+            <div className="stat-details">
+              <span className="stat-num">{categoriesCount}</span>
+              <span className="stat-label">{t.totalCategories}</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Main Search & Filters Section */}
@@ -191,15 +269,19 @@ export default function App() {
 
           {/* Category Tabs */}
           <div className="category-tabs">
-            {CATEGORIES[lang].map((cat) => (
-              <button
-                key={cat.val}
-                className={`category-tab ${selectedCategory === cat.val ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat.val)}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {CATEGORIES[lang].map((cat) => {
+              const IconComponent = CATEGORY_ICONS[cat.val] || Layers;
+              return (
+                <button
+                  key={cat.val}
+                  className={`category-tab ${selectedCategory === cat.val ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat.val)}
+                >
+                  <IconComponent size={16} className="tab-icon" />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -221,13 +303,30 @@ export default function App() {
               const isLowStock = item.quantity > 0 && item.quantity <= 3;
               const priceSyp = Math.ceil(item.selling_price_usd * exchangeRate / 5) * 5;
 
+              // Generate WhatsApp Link
+              const waText = encodeURIComponent(
+                lang === 'ar'
+                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${item.name} (${item.brand || ''} ${item.model || ''}) بكود OEM: ${item.barcode}`
+                  : `Hello QUICK AUTO, I'd like to ask about/order part: ${item.name} (${item.brand || ''} ${item.model || ''}) with OEM code: ${item.barcode}`
+              );
+              const waUrl = `https://wa.me/963992162351?text=${waText}`;
+
               return (
                 <div key={item.id} className="part-card">
-                  {/* Status Badge */}
-                  <div className="card-status-wrapper">
+                  {/* Status & Copy Header */}
+                  <div className="card-header-row">
                     <span className={`status-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
                       {!inStock ? t.outOfStock : isLowStock ? t.lowStock : t.inStock}
                     </span>
+
+                    <button 
+                      className="copy-btn" 
+                      onClick={() => handleCopyCode(item.id, item.barcode)}
+                      title={copiedId === item.id ? t.copied : t.copy}
+                    >
+                      {copiedId === item.id ? <Check size={14} className="success-icon" /> : <Copy size={14} />}
+                      <span>{copiedId === item.id ? t.copied : item.barcode}</span>
+                    </button>
                   </div>
 
                   {/* Part Details */}
@@ -246,22 +345,38 @@ export default function App() {
                         <span className="meta-val">{item.model}</span>
                       </div>
                     )}
-                    <div className="meta-row">
-                      <span className="meta-label">{t.code}</span>
-                      <span className="meta-val code-val">{item.barcode}</span>
+                    
+                    {/* Quantity Display */}
+                    <div className="meta-row quantity-row">
+                      <span className="meta-label">{t.qtyAvailable}</span>
+                      <span className={`meta-val qty-val ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
+                        {item.quantity} {t.pieces}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Price Section */}
+                  {/* Price and Action Section */}
                   <div className="price-box">
-                    <div className="price-syp">
-                      <span className="price-num">{priceSyp.toLocaleString()}</span>
-                      <span className="price-unit">{t.currencySYP}</span>
+                    <div className="price-info">
+                      <div className="price-syp">
+                        <span className="price-num">{priceSyp.toLocaleString()}</span>
+                        <span className="price-unit">{t.currencySYP}</span>
+                      </div>
+                      <div className="price-usd">
+                        <span>$</span>
+                        <span>{item.selling_price_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
                     </div>
-                    <div className="price-usd">
-                      <span>$</span>
-                      <span>{item.selling_price_usd}</span>
-                    </div>
+
+                    <a 
+                      href={waUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="wa-order-btn"
+                    >
+                      <MessageSquare size={16} />
+                      <span>{t.orderWhatsApp}</span>
+                    </a>
                   </div>
                 </div>
               );
@@ -270,19 +385,26 @@ export default function App() {
         )}
       </main>
 
-      {/* Sticky Bottom Contact Panel for Mobile */}
+      {/* Sticky Bottom Contact Panel */}
       <footer className="footer">
         <div className="footer-info">
           <div className="info-item">
-            <MapPin size={16} />
-            <span>{t.address}</span>
+            <MapPin size={18} className="footer-icon" />
+            <a 
+              href="https://maps.google.com/?q=32.6256,36.1054" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="footer-link"
+            >
+              {t.address}
+            </a>
           </div>
           <div className="info-item">
-            <Phone size={16} />
-            <a href="tel:+963955555555" className="phone-link">+963 955 555 555</a>
+            <Phone size={18} className="footer-icon" />
+            <a href="tel:+963992162351" className="footer-link">+963 992 162 351</a>
           </div>
         </div>
-        <p className="copyright">© {new Date().getFullYear()} QUICKAUTO. {t.allRightsReserved}</p>
+        <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
       </footer>
     </div>
   );
