@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, Wrench, Droplet, 
-  Sparkles, Cpu, Layers, Grid, Copy, Check, MessageSquare, Package 
+  Sparkles, Cpu, Layers, Grid, Copy, Check, MessageSquare, X 
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -100,14 +100,31 @@ const TRANSLATIONS = {
   }
 };
 
+const getCategoryImageUrl = (category: string | null, name: string) => {
+  const cat = (category || '').toUpperCase();
+  const lowerName = (name || '').toLowerCase();
+  
+  if (cat.includes('OIL') || cat.includes('زيت') || lowerName.includes('زيت') || lowerName.includes('oil') || lowerName.includes('fluid') || lowerName.includes('سائل')) {
+    return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
+  }
+  if (cat.includes('TIRE') || cat.includes('بطارية') || cat.includes('إطار') || lowerName.includes('إطار') || lowerName.includes('tire') || lowerName.includes('wheel') || lowerName.includes('battery') || lowerName.includes('بطارية')) {
+    return 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=400&q=80';
+  }
+  if (cat.includes('ACCESSORY') || cat.includes('إكسسوار') || lowerName.includes('اكسسوار') || lowerName.includes('accessory') || lowerName.includes('steering') || lowerName.includes('مقود')) {
+    return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
+};
+
 export default function App() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(15000); // Fallback rate
+  const [exchangeRate, setExchangeRate] = useState<number>(140.20); // Fallback rate
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const t = TRANSLATIONS[lang];
 
@@ -127,13 +144,7 @@ export default function App() {
         .maybeSingle();
       
       if (rateData && rateData.rate) {
-        const rawRate = rateData.rate;
-        // Handle both Legacy (raw e.g. 15000) and New (100x e.g. 1500000) formats
-        if (rawRate > 100000) {
-          setExchangeRate(rawRate / 100);
-        } else {
-          setExchangeRate(rawRate);
-        }
+        setExchangeRate(rateData.rate / 100);
       }
 
       // 2. Fetch inventory items from the secure public view (or table)
@@ -182,15 +193,7 @@ export default function App() {
     });
   }, [items, search, selectedCategory]);
 
-  // General counts for Stats Cards
-  const totalStockCount = useMemo(() => {
-    return items.reduce((acc, item) => acc + (item.quantity > 0 ? item.quantity : 0), 0);
-  }, [items]);
 
-  const categoriesCount = useMemo(() => {
-    const activeCats = new Set(items.map(i => i.category || 'OTHER'));
-    return activeCats.size;
-  }, [items]);
 
   return (
     <div className="app-container" style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
@@ -203,9 +206,21 @@ export default function App() {
       {/* Top Header Navigation */}
       <header className="navbar">
         <div className="navbar-brand">
-          <span className="brand-quick">QUICK</span>
-          <span className="brand-space"> </span>
           <span className="brand-auto">AUTO</span>
+          <span className="brand-space"> </span>
+          <span className="brand-quick">QUICK</span>
+        </div>
+        
+        {/* Small Search Box in Header */}
+        <div className="header-search-box">
+          <Search className="header-search-icon" size={16} />
+          <input
+            type="text"
+            placeholder={t.searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="header-search-input"
+          />
         </div>
         
         <div className="navbar-actions">
@@ -213,7 +228,9 @@ export default function App() {
           <div className="rate-badge">
             <span className="rate-indicator"></span>
             <span className="rate-label">{t.exchangeRateText}</span>
-            <span className="rate-value">{exchangeRate.toLocaleString()} {t.currencySYP} / $</span>
+            <span className="rate-value">
+              {exchangeRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {t.currencySYP} / $
+            </span>
           </div>
 
           {/* Language Toggle */}
@@ -226,63 +243,22 @@ export default function App() {
 
       {/* Hero Section */}
       <section className="hero">
-        <div className="live-pill">
-          <span className="pulse-dot"></span>
-          <span>{t.lastUpdated}</span>
-        </div>
-        <h1 className="hero-title">{t.title}</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
-
-        {/* Stats Row */}
-        <div className="stats-row">
-          <div className="stat-box">
-            <Package size={20} className="stat-icon" />
-            <div className="stat-details">
-              <span className="stat-num">{totalStockCount.toLocaleString()}</span>
-              <span className="stat-label">{t.totalParts}</span>
-            </div>
-          </div>
-          <div className="stat-box">
-            <Layers size={20} className="stat-icon" />
-            <div className="stat-details">
-              <span className="stat-num">{categoriesCount}</span>
-              <span className="stat-label">{t.totalCategories}</span>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Main Search & Filters Section */}
       <main className="catalog-wrapper">
-        <div className="controls-card">
-          {/* Search Input */}
-          <div className="search-box">
-            <Search className="search-icon" size={20} />
-            <input
-              type="text"
-              placeholder={t.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          {/* Category Tabs */}
-          <div className="category-tabs">
-            {CATEGORIES[lang].map((cat) => {
-              const IconComponent = CATEGORY_ICONS[cat.val] || Layers;
-              return (
-                <button
-                  key={cat.val}
-                  className={`category-tab ${selectedCategory === cat.val ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.val)}
-                >
-                  <IconComponent size={16} className="tab-icon" />
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="catalog-toolbar">
+          <button className="filter-toggle-btn" onClick={() => setFilterOpen(true)}>
+            <Grid size={18} />
+            <span>{lang === 'ar' ? 'الفلتر' : 'Filter'}</span>
+          </button>
+          {selectedCategory !== 'ALL' && (
+            <div className="active-filter-badge">
+              <span>{CATEGORIES[lang].find(c => c.val === selectedCategory)?.label}</span>
+              <button onClick={() => setSelectedCategory('ALL')} className="clear-filter-btn">×</button>
+            </div>
+          )}
         </div>
 
         {/* Catalog Grid */}
@@ -313,6 +289,16 @@ export default function App() {
 
               return (
                 <div key={item.id} className="part-card">
+                  {/* Item Image at the top */}
+                  <div className="part-card-image-wrapper">
+                    <img 
+                      src={(item as any).image_url || getCategoryImageUrl(item.category, item.name)} 
+                      alt={item.name} 
+                      className="part-card-image"
+                      loading="lazy"
+                    />
+                  </div>
+
                   {/* Status & Copy Header */}
                   <div className="card-header-row">
                     <span className={`status-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
@@ -384,6 +370,39 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Filter Sidebar Drawer */}
+      <div className={`filter-sidebar ${filterOpen ? 'open' : ''}`}>
+        <div className="filter-sidebar-backdrop" onClick={() => setFilterOpen(false)}></div>
+        <div className="filter-sidebar-content">
+          <div className="filter-sidebar-header">
+            <h3>{lang === 'ar' ? 'تصنيفات الأقسام' : 'Filter by Category'}</h3>
+            <button className="close-sidebar-btn" onClick={() => setFilterOpen(false)}>
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="filter-sidebar-body">
+            {CATEGORIES[lang].map((cat) => {
+              const IconComponent = CATEGORY_ICONS[cat.val] || Layers;
+              const isActive = selectedCategory === cat.val;
+              return (
+                <button
+                  key={cat.val}
+                  className={`filter-sidebar-item ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat.val);
+                    setFilterOpen(false);
+                  }}
+                >
+                  <IconComponent size={18} className="item-icon" />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Sticky Bottom Contact Panel */}
       <footer className="footer">
