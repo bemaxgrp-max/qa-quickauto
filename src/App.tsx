@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { 
-  Search, Globe, Phone, MapPin, AlertCircle, Wrench, Droplet, 
-  Sparkles, Cpu, Layers, Grid, Copy, Check, MessageSquare, X 
+  Search, Globe, Phone, MapPin, AlertCircle, 
+  Grid, Copy, Check, MessageSquare
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -34,15 +34,6 @@ const CATEGORIES = {
     { val: 'TIRES', label: 'Tires & Batteries' },
     { val: 'OTHER', label: 'Other' }
   ]
-};
-
-const CATEGORY_ICONS: Record<string, any> = {
-  ALL: Grid,
-  SPARE_PARTS: Wrench,
-  OILS: Droplet,
-  ACCESSORIES: Sparkles,
-  TIRES: Cpu,
-  OTHER: Layers
 };
 
 const TRANSLATIONS = {
@@ -116,6 +107,23 @@ const getCategoryImageUrl = (category: string | null, name: string) => {
   return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
 };
 
+const getCategoryBgImage = (val: string) => {
+  switch (val) {
+    case 'ALL':
+      return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
+    case 'OILS':
+      return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
+    case 'TIRES':
+      return 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=400&q=80';
+    case 'ACCESSORIES':
+      return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
+    case 'SPARE_PARTS':
+      return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
+    default:
+      return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
+  }
+};
+
 export default function App() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [search, setSearch] = useState('');
@@ -129,86 +137,101 @@ export default function App() {
   const t = TRANSLATIONS[lang];
 
   useEffect(() => {
-    fetchCatalogData();
+    // 1. Fetch exchange rate from supabase (latest rate_syp from daily_rates)
+    supabase
+      .from('exchange_rates')
+      .select('rate')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: rateData }) => {
+        if (rateData && rateData.rate) {
+          setExchangeRate(rateData.rate / 100);
+        }
+      });
+
+    // 2. Fetch inventory items from the secure public view (or table)
+    supabase
+      .from('public_inventory_view')
+      .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, created_at')
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('Could not read from public_inventory_view, falling back to table:', error.message);
+          
+          // Fallback to reading directly from inventory_items if permitted
+          supabase
+            .from('inventory_items')
+            .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, created_at')
+            .then(({ data: fallbackData, error: fallbackError }) => {
+              if (fallbackError) {
+                console.error('Error fetching inventory_items fallback:', fallbackError.message);
+              } else if (fallbackData) {
+                setItems(fallbackData as InventoryItem[]);
+              }
+              setLoading(false);
+            });
+        } else if (data) {
+          setItems(data as InventoryItem[]);
+          setLoading(false);
+        }
+      });
   }, []);
 
-  const fetchCatalogData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch latest exchange rate (Supabase stores rate * 100, e.g. 1500000 for 15000)
-      const { data: rateData } = await supabase
-        .from('exchange_rates')
-        .select('rate')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (rateData && rateData.rate) {
-        setExchangeRate(rateData.rate / 100);
-      }
-
-      // 2. Fetch inventory items from the secure public view (or table)
-      const { data: itemsData, error } = await supabase
-        .from('public_inventory_view')
-        .select('*');
-
-      if (error) {
-        console.warn('Could not read from public_inventory_view, falling back to table:', error.message);
-        const { data: fallbackData } = await supabase
-          .from('inventory_items')
-          .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, created_at');
-        if (fallbackData) {
-          setItems(fallbackData);
-        }
-      } else if (itemsData) {
-        setItems(itemsData);
-      }
-    } catch (err) {
-      console.error('Error fetching catalog:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopyCode = (id: string, code: string) => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = (id: string, barcode: string) => {
+    navigator.clipboard.writeText(barcode);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Filter items based on category and search text
+  // Filter items based on search and selectedCategory
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      const matchSearch =
-        (item.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (item.barcode || '').toLowerCase().includes(search.toLowerCase()) ||
-        (item.brand || '').toLowerCase().includes(search.toLowerCase()) ||
-        (item.model || '').toLowerCase().includes(search.toLowerCase());
+    return items.filter((item) => {
+      // Search matches name or barcode (OEM)
+      const matchSearch = 
+        item.name.toLowerCase().includes(search.toLowerCase()) ||
+        item.barcode.toLowerCase().includes(search.toLowerCase());
 
-      const matchCategory =
-        selectedCategory === 'ALL' ||
-        (item.category || 'OTHER') === selectedCategory;
+      // Category matches
+      const itemCat = (item.category || '').toUpperCase();
+      let matchCategory = true;
+      if (selectedCategory !== 'ALL') {
+        if (selectedCategory === 'OILS') {
+          matchCategory = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
+        } else if (selectedCategory === 'TIRES') {
+          matchCategory = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
+        } else if (selectedCategory === 'ACCESSORIES') {
+          matchCategory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
+        } else if (selectedCategory === 'SPARE_PARTS') {
+          matchCategory = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
+        } else if (selectedCategory === 'OTHER') {
+          const isOil = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
+          const isTire = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
+          const isAccessory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
+          const isPart = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
+          matchCategory = !isOil && !isTire && !isAccessory && !isPart;
+        }
+      }
 
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
 
-
-
   return (
     <div className="app-container" style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       
-      {/* Background Decorative Blurs */}
-      <div className="background-decor blur-orb-1"></div>
-      <div className="background-decor blur-orb-2"></div>
-      <div className="background-decor blur-orb-3"></div>
-
       {/* Top Header Navigation */}
       <header className="navbar">
-        <div className="navbar-brand">
-          <span className="brand-auto">AUTO</span>
-          <span className="brand-space"> </span>
-          <span className="brand-quick">QUICK</span>
+        <div className="brand-and-filter">
+          <div className="navbar-brand">
+            <span className="brand-auto">AUTO</span>
+            <span className="brand-space"> </span>
+            <span className="brand-quick">QUICK</span>
+          </div>
+          
+          <button className="filter-toggle-btn-header" onClick={() => setFilterOpen(!filterOpen)}>
+            <Grid size={16} />
+            <span>{lang === 'ar' ? 'الفلتر' : 'Filter'}</span>
+          </button>
         </div>
         
         {/* Small Search Box in Header */}
@@ -239,20 +262,89 @@ export default function App() {
             <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
           </button>
         </div>
+
+        {/* Dropdown containing category cards */}
+        {filterOpen && (
+          <div className="header-filter-dropdown">
+            <div className="header-filter-dropdown-content">
+              {CATEGORIES[lang].map((cat) => {
+                // Filter items for this category
+                const catItems = items.filter(item => {
+                  const itemCat = (item.category || '').toUpperCase();
+                  if (cat.val === 'ALL') return true;
+                  if (cat.val === 'OILS') return itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
+                  if (cat.val === 'TIRES') return itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
+                  if (cat.val === 'ACCESSORIES') return itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
+                  if (cat.val === 'SPARE_PARTS') return itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
+                  if (cat.val === 'OTHER') {
+                    const isOil = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
+                    const isTire = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
+                    const isAccessory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
+                    const isPart = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
+                    return !isOil && !isTire && !isAccessory && !isPart;
+                  }
+                  return false;
+                });
+
+                const bgImg = getCategoryBgImage(cat.val);
+
+                return (
+                  <div key={cat.val} className="category-dropdown-card" style={{ backgroundImage: `url(${bgImg})` }}>
+                    <div className="category-card-overlay"></div>
+                    <div className="category-card-content">
+                      <h4>{cat.label}</h4>
+                    </div>
+                    
+                    {/* Hover List */}
+                    <div className="category-items-hover-list">
+                      <div className="hover-list-header">{lang === 'ar' ? 'المواد المتوفرة' : 'Available Items'}</div>
+                      <div className="hover-list-body">
+                        {catItems.length === 0 ? (
+                          <div className="hover-list-empty">{lang === 'ar' ? 'لا يوجد مواد' : 'No items'}</div>
+                        ) : (
+                          catItems.slice(0, 15).map(item => (
+                            <button 
+                              key={item.id} 
+                              className="hover-list-item"
+                              onClick={() => {
+                                setSelectedCategory(cat.val);
+                                setSearch(item.name);
+                                setFilterOpen(false);
+                                document.querySelector('.catalog-wrapper')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                            >
+                              <span className="hover-item-name">{item.name}</span>
+                              <span className="hover-item-qty">{item.quantity}</span>
+                            </button>
+                          ))
+                        )}
+                        {catItems.length > 15 && (
+                          <div className="hover-list-empty" style={{ padding: '0.25rem', fontSize: '0.7rem' }}>
+                            {lang === 'ar' ? `+ ${catItems.length - 15} مواد أخرى` : `+ ${catItems.length - 15} more items`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
       <section className="hero">
-        <p className="hero-subtitle">{t.subtitle}</p>
+        <p className="hero-subtitle">
+          {lang === 'ar' 
+            ? 'ابحث عن قطع الغيار والملحقات المتوفرة في مركزنا الفني مباشرة وبشفافية'
+            : 'Search available spare parts and accessories in our technical center directly and transparently'}
+        </p>
       </section>
 
       {/* Main Search & Filters Section */}
       <main className="catalog-wrapper">
         <div className="catalog-toolbar">
-          <button className="filter-toggle-btn" onClick={() => setFilterOpen(true)}>
-            <Grid size={18} />
-            <span>{lang === 'ar' ? 'الفلتر' : 'Filter'}</span>
-          </button>
           {selectedCategory !== 'ALL' && (
             <div className="active-filter-badge">
               <span>{CATEGORIES[lang].find(c => c.val === selectedCategory)?.label}</span>
@@ -289,7 +381,7 @@ export default function App() {
 
               return (
                 <div key={item.id} className="part-card">
-                  {/* Item Image at the top */}
+                  {/* Item Image at the top with quantity badge */}
                   <div className="part-card-image-wrapper">
                     <img 
                       src={(item as any).image_url || getCategoryImageUrl(item.category, item.name)} 
@@ -297,71 +389,61 @@ export default function App() {
                       className="part-card-image"
                       loading="lazy"
                     />
+                    <span className={`image-qty-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
+                      {item.quantity}
+                    </span>
                   </div>
 
-                  {/* Status & Copy Header */}
-                  <div className="card-header-row">
-                    <span className={`status-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
-                      {!inStock ? t.outOfStock : isLowStock ? t.lowStock : t.inStock}
-                    </span>
-
+                  {/* S1: Name and OEM Barcode */}
+                  <div className="card-row-1">
+                    <h3 className="part-name-new" title={item.name}>{item.name}</h3>
+                    
                     <button 
-                      className="copy-btn" 
+                      className="copy-btn-new" 
                       onClick={() => handleCopyCode(item.id, item.barcode)}
                       title={copiedId === item.id ? t.copied : t.copy}
                     >
-                      {copiedId === item.id ? <Check size={14} className="success-icon" /> : <Copy size={14} />}
+                      {copiedId === item.id ? <Check size={12} className="success-icon" /> : <Copy size={12} />}
                       <span>{copiedId === item.id ? t.copied : item.barcode}</span>
                     </button>
                   </div>
 
-                  {/* Part Details */}
-                  <h3 className="part-name">{item.name}</h3>
+                  {/* S2: Model only */}
+                  <div className="card-row-2">
+                    <span className="model-only-text">{item.model || '—'}</span>
+                  </div>
 
-                  <div className="part-meta-rows">
-                    {item.brand && (
-                      <div className="meta-row">
-                        <span className="meta-label">{t.brand}</span>
-                        <span className="meta-val">{item.brand}</span>
-                      </div>
-                    )}
-                    {item.model && (
-                      <div className="meta-row">
-                        <span className="meta-label">{t.model}</span>
-                        <span className="meta-val">{item.model}</span>
-                      </div>
-                    )}
+                  {/* S3: Prices USD & SYP side-by-side */}
+                  <div className="card-row-3">
+                    <div className="price-usd-new">
+                      <span>$</span>
+                      <span>{item.selling_price_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                     
-                    {/* Quantity Display */}
-                    <div className="meta-row quantity-row">
-                      <span className="meta-label">{t.qtyAvailable}</span>
-                      <span className={`meta-val qty-val ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
-                        {item.quantity} {t.pieces}
-                      </span>
+                    <div className="price-syp-new">
+                      <span>{priceSyp.toLocaleString()}</span>
+                      <span className="syp-unit-new"> {t.currencySYP}</span>
                     </div>
                   </div>
 
-                  {/* Price and Action Section */}
-                  <div className="price-box">
-                    <div className="price-info">
-                      <div className="price-syp">
-                        <span className="price-num">{priceSyp.toLocaleString()}</span>
-                        <span className="price-unit">{t.currencySYP}</span>
-                      </div>
-                      <div className="price-usd">
-                        <span>$</span>
-                        <span>{item.selling_price_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-
+                  {/* S4: WhatsApp order button and direct call button */}
+                  <div className="card-row-4">
                     <a 
                       href={waUrl} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="wa-order-btn"
+                      className="wa-order-btn-new"
                     >
-                      <MessageSquare size={16} />
+                      <MessageSquare size={14} />
                       <span>{t.orderWhatsApp}</span>
+                    </a>
+                    
+                    <a 
+                      href="tel:+963992162351" 
+                      className="call-btn-new"
+                      title={lang === 'ar' ? 'اتصال مباشر' : 'Call Direct'}
+                    >
+                      <Phone size={14} />
                     </a>
                   </div>
                 </div>
@@ -370,39 +452,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* Filter Sidebar Drawer */}
-      <div className={`filter-sidebar ${filterOpen ? 'open' : ''}`}>
-        <div className="filter-sidebar-backdrop" onClick={() => setFilterOpen(false)}></div>
-        <div className="filter-sidebar-content">
-          <div className="filter-sidebar-header">
-            <h3>{lang === 'ar' ? 'تصنيفات الأقسام' : 'Filter by Category'}</h3>
-            <button className="close-sidebar-btn" onClick={() => setFilterOpen(false)}>
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div className="filter-sidebar-body">
-            {CATEGORIES[lang].map((cat) => {
-              const IconComponent = CATEGORY_ICONS[cat.val] || Layers;
-              const isActive = selectedCategory === cat.val;
-              return (
-                <button
-                  key={cat.val}
-                  className={`filter-sidebar-item ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedCategory(cat.val);
-                    setFilterOpen(false);
-                  }}
-                >
-                  <IconComponent size={18} className="item-icon" />
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* Sticky Bottom Contact Panel */}
       <footer className="footer">
@@ -420,7 +469,7 @@ export default function App() {
           </div>
           <div className="info-item">
             <Phone size={18} className="footer-icon" />
-            <a href="tel:+963992162351" className="footer-link">+963 992 162 351</a>
+            <a href="tel:+963992162351" className="footer-link" dir="ltr">+963 992 162 351</a>
           </div>
         </div>
         <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
