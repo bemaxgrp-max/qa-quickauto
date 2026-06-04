@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
-  Grid, Copy, Check, MessageSquare
+  Grid, MessageSquare, Heart, ShoppingCart
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -131,8 +131,45 @@ export default function App() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(140.20); // Fallback rate
   const [loading, setLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('quickauto_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [cart, setCart] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('quickauto_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('quickauto_wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  useEffect(() => {
+    localStorage.setItem('quickauto_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const handleToggleWishlist = (id: string) => {
+    setWishlist(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleCart = (id: string) => {
+    setCart(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
   const t = TRANSLATIONS[lang];
 
@@ -176,12 +213,6 @@ export default function App() {
         }
       });
   }, []);
-
-  const handleCopyCode = (id: string, barcode: string) => {
-    navigator.clipboard.writeText(barcode);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   // Filter items based on search and selectedCategory
   const filteredItems = useMemo(() => {
@@ -256,10 +287,21 @@ export default function App() {
             </span>
           </div>
 
+          {/* Cart Button */}
+          <button className="icon-nav-btn" title={lang === 'ar' ? 'السلة' : 'Cart'}>
+            <ShoppingCart size={18} />
+            {cart.length > 0 && <span className="nav-btn-badge">{cart.length}</span>}
+          </button>
+
+          {/* Wishlist Button */}
+          <button className="icon-nav-btn" title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}>
+            <Heart size={18} />
+            {wishlist.length > 0 && <span className="nav-btn-badge">{wishlist.length}</span>}
+          </button>
+
           {/* Language Toggle */}
-          <button className="lang-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
-            <Globe size={16} />
-            <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+          <button className="icon-nav-btn lang-btn" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} title={lang === 'ar' ? 'English' : 'العربية'}>
+            <Globe size={18} />
           </button>
         </div>
 
@@ -333,25 +375,16 @@ export default function App() {
         )}
       </header>
 
-      {/* Hero Section */}
-      <section className="hero">
-        <p className="hero-subtitle">
-          {lang === 'ar' 
-            ? 'ابحث عن قطع الغيار والملحقات المتوفرة في مركزنا الفني مباشرة وبشفافية'
-            : 'Search available spare parts and accessories in our technical center directly and transparently'}
-        </p>
-      </section>
-
       {/* Main Search & Filters Section */}
       <main className="catalog-wrapper">
-        <div className="catalog-toolbar">
-          {selectedCategory !== 'ALL' && (
+        {selectedCategory !== 'ALL' && (
+          <div className="catalog-toolbar">
             <div className="active-filter-badge">
               <span>{CATEGORIES[lang].find(c => c.val === selectedCategory)?.label}</span>
               <button onClick={() => setSelectedCategory('ALL')} className="clear-filter-btn">×</button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Catalog Grid */}
         {loading ? (
@@ -381,7 +414,7 @@ export default function App() {
 
               return (
                 <div key={item.id} className="part-card">
-                  {/* Item Image at the top with quantity badge */}
+                  {/* Item Image at the top with quantity badge & wishlist heart button */}
                   <div className="part-card-image-wrapper">
                     <img 
                       src={(item as any).image_url || getCategoryImageUrl(item.category, item.name)} 
@@ -392,25 +425,19 @@ export default function App() {
                     <span className={`image-qty-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
                       {item.quantity}
                     </span>
-                  </div>
-
-                  {/* S1: Name and OEM Barcode */}
-                  <div className="card-row-1">
-                    <h3 className="part-name-new" title={item.name}>{item.name}</h3>
-                    
                     <button 
-                      className="copy-btn-new" 
-                      onClick={() => handleCopyCode(item.id, item.barcode)}
-                      title={copiedId === item.id ? t.copied : t.copy}
+                      className={`image-wishlist-btn ${wishlist.includes(item.id) ? 'active' : ''}`}
+                      onClick={() => handleToggleWishlist(item.id)}
+                      title={wishlist.includes(item.id) ? (lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from wishlist') : (lang === 'ar' ? 'إضافة إلى المفضلة' : 'Add to wishlist')}
                     >
-                      {copiedId === item.id ? <Check size={12} className="success-icon" /> : <Copy size={12} />}
-                      <span>{copiedId === item.id ? t.copied : item.barcode}</span>
+                      <Heart size={14} fill={wishlist.includes(item.id) ? "currentColor" : "none"} />
                     </button>
                   </div>
 
-                  {/* S2: Model only */}
-                  <div className="card-row-2">
-                    <span className="model-only-text">{item.model || '—'}</span>
+                  {/* S1: Name and Model (replacing Barcode) */}
+                  <div className="card-row-1">
+                    <h3 className="part-name-new" title={item.name}>{item.name}</h3>
+                    <span className="model-badge-new" title={item.model || ''}>{item.model || '—'}</span>
                   </div>
 
                   {/* S3: Prices USD & SYP side-by-side */}
@@ -426,7 +453,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* S4: WhatsApp order button and direct call button */}
+                  {/* S4: WhatsApp order button, Cart icon button, and direct call button */}
                   <div className="card-row-4">
                     <a 
                       href={waUrl} 
@@ -437,6 +464,14 @@ export default function App() {
                       <MessageSquare size={14} />
                       <span>{t.orderWhatsApp}</span>
                     </a>
+                    
+                    <button 
+                      className={`card-cart-btn ${cart.includes(item.id) ? 'in-cart' : ''}`}
+                      onClick={() => handleToggleCart(item.id)}
+                      title={cart.includes(item.id) ? (lang === 'ar' ? 'إزالة من السلة' : 'Remove from cart') : (lang === 'ar' ? 'إضافة إلى السلة' : 'Add to cart')}
+                    >
+                      <ShoppingCart size={14} />
+                    </button>
                     
                     <a 
                       href="tel:+963992162351" 
@@ -455,9 +490,9 @@ export default function App() {
 
       {/* Sticky Bottom Contact Panel */}
       <footer className="footer">
-        <div className="footer-info">
+        <div className="footer-content-row">
           <div className="info-item">
-            <MapPin size={18} className="footer-icon" />
+            <MapPin size={14} className="footer-icon" />
             <a 
               href="https://maps.google.com/?q=32.6256,36.1054" 
               target="_blank" 
@@ -467,12 +502,14 @@ export default function App() {
               {t.address}
             </a>
           </div>
+          <span className="footer-separator">|</span>
           <div className="info-item">
-            <Phone size={18} className="footer-icon" />
+            <Phone size={14} className="footer-icon" />
             <a href="tel:+963992162351" className="footer-link" dir="ltr">+963 992 162 351</a>
           </div>
+          <span className="footer-separator">|</span>
+          <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
         </div>
-        <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
       </footer>
     </div>
   );
