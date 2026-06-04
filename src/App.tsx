@@ -27,22 +27,22 @@ interface InventoryItem {
 const CATEGORIES = {
   ar: [
     { val: 'ALL', label: 'الكل' },
+    { val: 'SERVICES', label: 'الخدمات' },
     { val: 'SPARE_PARTS', label: 'قطع الغيار' },
     { val: 'OILS', label: 'الزيوت والسوائل' },
     { val: 'TIRES', label: 'الاطارات' },
-    { val: 'BATTERIES', label: 'البطاريات' },
-    { val: 'SERVICES', label: 'الخدمات' },
     { val: 'ACCESSORIES', label: 'اكسسوارات السيارات' },
+    { val: 'BATTERIES', label: 'البطاريات' },
     { val: 'OTHER', label: 'تصنيفات اخرى' }
   ],
   en: [
     { val: 'ALL', label: 'All' },
+    { val: 'SERVICES', label: 'Services' },
     { val: 'SPARE_PARTS', label: 'Spare Parts' },
     { val: 'OILS', label: 'Oils & Fluids' },
     { val: 'TIRES', label: 'Tires' },
-    { val: 'BATTERIES', label: 'Batteries' },
-    { val: 'SERVICES', label: 'Services' },
     { val: 'ACCESSORIES', label: 'Car Accessories' },
+    { val: 'BATTERIES', label: 'Batteries' },
     { val: 'OTHER', label: 'Other Categories' }
   ]
 };
