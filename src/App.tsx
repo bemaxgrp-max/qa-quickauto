@@ -144,13 +144,18 @@ export default function App() {
     }
   });
 
-  const [cart, setCart] = useState<string[]>(() => {
+  // Cart: Record<itemId, qty>
+  const [cart, setCart] = useState<Record<string, number>>(() => {
     try {
       const saved = localStorage.getItem('quickauto_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      // migrate old string[] format
+      if (Array.isArray(parsed)) {
+        return Object.fromEntries(parsed.map((id: string) => [id, 1]));
+      }
+      return parsed as Record<string, number>;
+    } catch { return {}; }
   });
 
   useEffect(() => {
@@ -162,15 +167,34 @@ export default function App() {
   }, [cart]);
 
   const handleToggleWishlist = (id: string) => {
-    setWishlist(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    setWishlist(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
+  // Add to cart (toggle: first press adds 1, second removes)
   const handleToggleCart = (id: string) => {
-    setCart(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+    setCart(prev => {
+      if ((prev[id] || 0) > 0) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: 1 };
+    });
+  };
+
+  // Change qty in cart (+/-)
+  const handleChangeQty = (id: string, delta: number) => {
+    setCart(prev => {
+      const newQty = (prev[id] || 0) + delta;
+      if (newQty <= 0) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: newQty };
+    });
   };
 
   const [activeList, setActiveList] = useState<'wishlist' | 'cart' | null>(null);
@@ -178,7 +202,7 @@ export default function App() {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   const cartItems = useMemo(() => {
-    return items.filter(item => cart.includes(item.id));
+    return items.filter(item => (cart[item.id] || 0) > 0);
   }, [items, cart]);
 
   const wishlistItems = useMemo(() => {
@@ -201,17 +225,37 @@ export default function App() {
   // Lock body scroll when overlays open
   useEffect(() => {
     const isOpen = !!activeList || filterOpen || !!zoomedImage;
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('overlay-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('overlay-open');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('overlay-open');
+    };
   }, [activeList, filterOpen, zoomedImage]);
 
-  // Pull-to-refresh (PWA)
+  // Pull-to-refresh (PWA) — only when no overlay open & at top
   useEffect(() => {
     let startY = 0;
-    const onTouchStart = (e: TouchEvent) => { startY = e.touches[0].clientY; };
+    let pulling = false;
+    const onTouchStart = (e: TouchEvent) => {
+      const top = document.scrollingElement?.scrollTop ?? window.scrollY;
+      if (top === 0 && !document.body.classList.contains('overlay-open')) {
+        startY = e.touches[0].clientY;
+        pulling = true;
+      } else {
+        pulling = false;
+      }
+    };
     const onTouchEnd = (e: TouchEvent) => {
+      if (!pulling) return;
       const dy = e.changedTouches[0].clientY - startY;
-      if (dy > 80 && window.scrollY === 0) window.location.reload();
+      if (dy > 90) window.location.reload();
+      pulling = false;
     };
     document.addEventListener('touchstart', onTouchStart, { passive: true });
     document.addEventListener('touchend', onTouchEnd, { passive: true });
@@ -253,13 +297,18 @@ export default function App() {
     });
   }, []);
 
+  // Category match: direct equality first, then partial fallback
   const matchesCategory = (itemCat: string, catVal: string): boolean => {
-    const c = itemCat.toUpperCase().trim();
     if (catVal === 'ALL') return true;
-    if (catVal === 'OILS') return c === 'OILS' || c.includes('OIL') || c.includes('زيت') || c.includes('سائل');
-    if (catVal === 'TIRES') return c === 'TIRES' || c.includes('TIRE') || c.includes('إطار') || c.includes('بطارية') || c.includes('BATTERY');
-    if (catVal === 'ACCESSORIES') return c === 'ACCESSORIES' || c.includes('ACCESSORY') || c.includes('إكسسوار');
-    if (catVal === 'SPARE_PARTS') return c === 'SPARE_PARTS' || c.includes('PART') || c.includes('قطعة') || c.includes('فلتر') || c.includes('FILTER');
+    const raw = (itemCat || '').trim();
+    const c = raw.toUpperCase();
+    // Direct match (DB stores SPARE_PARTS, OILS, TIRES, ACCESSORIES, OTHER)
+    if (c === catVal) return true;
+    // Partial fallback
+    if (catVal === 'OILS') return c.includes('OIL') || c.includes('زيت') || c.includes('سائل');
+    if (catVal === 'TIRES') return c.includes('TIRE') || c.includes('إطار') || c.includes('بطارية') || c.includes('BATTERY');
+    if (catVal === 'ACCESSORIES') return c.includes('ACCESSORY') || c.includes('ACCESSORIES') || c.includes('إكسسوار');
+    if (catVal === 'SPARE_PARTS') return c.includes('SPARE') || c.includes('PART') || c.includes('قطعة') || c.includes('فلتر') || c.includes('FILTER');
     if (catVal === 'OTHER') {
       return !matchesCategory(itemCat, 'OILS') && !matchesCategory(itemCat, 'TIRES') &&
              !matchesCategory(itemCat, 'ACCESSORIES') && !matchesCategory(itemCat, 'SPARE_PARTS');
@@ -333,7 +382,7 @@ export default function App() {
             title={lang === 'ar' ? 'السلة' : 'Cart'}
           >
             <ShoppingCart size={18} />
-            {cart.length > 0 && <span className="nav-btn-badge">{cart.length}</span>}
+            {Object.keys(cart).length > 0 && <span className="nav-btn-badge">{Object.keys(cart).length}</span>}
           </button>
 
           {/* Wishlist Button */}
@@ -496,12 +545,12 @@ export default function App() {
                   {/* S4: Cart qty badge + WhatsApp + Call */}
                   <div className="card-row-4">
                     <button 
-                      className={`card-cart-btn ${cart.includes(item.id) ? 'in-cart' : ''}`}
+                      className={`card-cart-btn ${(cart[item.id]||0)>0 ? 'in-cart' : ''}`}
                       onClick={(e) => { e.stopPropagation(); handleToggleCart(item.id); }}
-                      title={cart.includes(item.id) ? (lang === 'ar' ? 'إزالة من السلة' : 'Remove from cart') : (lang === 'ar' ? 'إضافة إلى السلة' : 'Add to cart')}
+                      title={(cart[item.id]||0)>0 ? (lang === 'ar' ? 'إزالة من السلة' : 'Remove from cart') : (lang === 'ar' ? 'إضافة إلى السلة' : 'Add to cart')}
                     >
                       <ShoppingCart size={17} />
-                      {cart.includes(item.id) && <span className="card-cart-qty">✓</span>}
+                      {(cart[item.id]||0)>0 && <span className="card-cart-qty">{cart[item.id]}</span>}
                     </button>
 
                     <a 
@@ -581,6 +630,7 @@ export default function App() {
                 ) : (
                   <div className="drawer-items-list">
                     {cartItems.map(item => {
+                      const qty = cart[item.id] || 1;
                       const priceSyp = Math.ceil(item.selling_price_usd * exchangeRate / 5) * 5;
                       return (
                         <div key={item.id} className="drawer-item">
@@ -592,15 +642,22 @@ export default function App() {
                           <div className="drawer-item-info">
                             <h4>{item.name}</h4>
                             <p>{item.model || '—'}</p>
-                            <span className="drawer-item-price">${item.selling_price_usd} / {priceSyp.toLocaleString()} {t.currencySYP}</span>
+                            <span className="drawer-item-price">${item.selling_price_usd} × {qty} = ${(item.selling_price_usd * qty).toLocaleString('en-US',{minimumFractionDigits:2})}</span>
                           </div>
-                          <button 
-                            className="drawer-remove-btn" 
-                            onClick={() => handleToggleCart(item.id)}
-                            title={lang === 'ar' ? 'إزالة' : 'Remove'}
-                          >
-                            ×
-                          </button>
+                          <div className="drawer-item-actions">
+                            <div className="qty-stepper">
+                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, -1)}>-</button>
+                              <span className="qty-val">{qty}</span>
+                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, 1)}>+</button>
+                            </div>
+                            <button 
+                              className="drawer-remove-btn" 
+                              onClick={() => handleToggleCart(item.id)}
+                              title={lang === 'ar' ? 'إزالة' : 'Remove'}
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -660,14 +717,14 @@ export default function App() {
                 <div className="drawer-total">
                   <span>{lang === 'ar' ? 'المجموع:' : 'Total:'}</span>
                   <span className="total-price">
-                    ${cartItems.reduce((acc, item) => acc + item.selling_price_usd, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ${cartItems.reduce((acc, item) => acc + item.selling_price_usd * (cart[item.id] || 1), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <a 
                   href={`https://wa.me/963992162351?text=${encodeURIComponent(
                     lang === 'ar'
-                      ? `مرحباً كويك أوتو، أود طلب المواد التالية:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (${item.brand || ''} ${item.model || ''}) OEM: ${item.barcode}`).join('\n')}`
-                      : `Hello QUICK AUTO, I'd like to order the following items:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (${item.brand || ''} ${item.model || ''}) OEM: ${item.barcode}`).join('\n')}`
+                      ? `مرحباً كويك أوتو، أود طلب المواد التالية:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (كمية: ${cart[item.id]||1}) OEM: ${item.barcode}`).join('\n')}`
+                      : `Hello QUICK AUTO, I'd like to order:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (Qty: ${cart[item.id]||1}) OEM: ${item.barcode}`).join('\n')}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -780,13 +837,13 @@ export default function App() {
                   </a>
                   
                   <button 
-                    className={`modal-cart-btn ${cart.includes(selectedItem.id) ? 'in-cart' : ''}`}
+                    className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
                     onClick={() => handleToggleCart(selectedItem.id)}
-                    title={cart.includes(selectedItem.id) ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
+                    title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
                   >
                     <ShoppingCart size={18} />
                     <span className="modal-btn-text">
-                      {cart.includes(selectedItem.id) ? (lang === 'ar' ? 'في السلة' : 'In Cart') : (lang === 'ar' ? 'السلة' : 'Cart')}
+                      {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? `في السلة (${cart[selectedItem.id]})` : `Cart (${cart[selectedItem.id]})`) : (lang === 'ar' ? 'السلة' : 'Cart')}
                     </span>
                   </button>
 
