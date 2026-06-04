@@ -517,7 +517,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 /* ─── Categories Landing Page ─── */
 .categories-landing-container {
-  width: 82%;
+  width: 92%;
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
