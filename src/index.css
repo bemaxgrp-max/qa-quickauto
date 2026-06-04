@@ -562,9 +562,13 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 .category-large-card {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 16px;
   overflow: hidden;
+  -webkit-mask-image: -webkit-radial-gradient(white, black); /* Fix Safari overflow rounding bug */
   cursor: pointer;
   background-color: #0d1426;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -584,6 +588,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   background-position: center;
   background-repeat: no-repeat;
   transition: transform 0.4s ease;
+  will-change: transform;
 }
 
 /* Special style for cards with light/white background images */
