@@ -136,7 +136,7 @@ const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
     TIRES: { img: '/cat-tires.jpg', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
     BATTERIES: { img: '/cat-batteries.jpg', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
     SERVICES: { img: '/cat-services.jpg', descAr: 'دوزان الكتروني - ترصيص الكتروني - تبديل اطارات - تبديل زيوت وسوائل - صيانة المكيف ...الخ', descEn: 'Electronic wheel alignment - balancing - tire replacement - oil change - AC maintenance ...etc' },
-    ACCESSORIES: { img: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80', descAr: 'مساحات الزجاج - معطرات ...الخ', descEn: 'Windshield wipers - air fresheners ...etc' },
+    ACCESSORIES: { img: '/cat-accessories.png', descAr: 'مساحات الزجاج - معطرات ...الخ', descEn: 'Windshield wipers - air fresheners ...etc' },
     OTHER: { img: '/cat-other.png', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
   };
   return m[val] || m['OTHER'];
