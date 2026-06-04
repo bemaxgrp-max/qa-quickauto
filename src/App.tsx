@@ -113,6 +113,15 @@ const getCategoryImageUrl = (category: string | null, name: string) => {
   if (cat.includes('ACCESSORY') || cat.includes('إكسسوار') || lowerName.includes('اكسسوار') || lowerName.includes('accessory') || lowerName.includes('steering') || lowerName.includes('مقود')) {
     return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
   }
+  if (lowerName.includes('غسيل') || lowerName.includes('wash') || lowerName.includes('تنظيف') || lowerName.includes('تلميع') || lowerName.includes('بوليش')) {
+    return 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=400&q=80';
+  }
+  if (lowerName.includes('فحص') || lowerName.includes('فني') || lowerName.includes('scan') || lowerName.includes('diagnose') || lowerName.includes('كمبيوتر')) {
+    return 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&w=400&q=80';
+  }
+  if (lowerName.includes('صيانة') || lowerName.includes('ميكانيك') || lowerName.includes('mechanic') || lowerName.includes('repair') || lowerName.includes('تصليح') || lowerName.includes('ضبط') || lowerName.includes('عيار')) {
+    return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
+  }
   return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
 };
 
@@ -323,7 +332,7 @@ export default function App() {
     const fetchServices = () =>
       supabase
         .from('services')
-        .select('id, name, price_usd, category, expected_duration_minutes, is_category_affected, silver_discount_percent, gold_discount_percent, platinum_discount_percent, parent_id, is_group, created_at')
+        .select('id, name, price_usd, category, expected_duration_minutes, is_category_affected, silver_discount_percent, gold_discount_percent, platinum_discount_percent, parent_id, is_group, image_url, created_at')
         .eq('is_group', false)
         .then(({ data, error }) => ({ data, error }));
 
@@ -344,7 +353,7 @@ export default function App() {
         quantity: 9999, // Unlimited stock for services
         selling_price_usd: s.price_usd || 0,
         category: 'SERVICES',
-        image_url: null,
+        image_url: s.image_url || null,
         created_at: s.created_at || new Date().toISOString(),
         isService: true,
         expected_duration_minutes: s.expected_duration_minutes,
