@@ -1215,9 +1215,9 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(4, 6, 13, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(4, 6, 13, 0.85);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   z-index: 2000;
   display: flex;
   align-items: center;
