@@ -566,8 +566,11 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 .category-card-bg {
   position: absolute;
-  /* Expand inset so unskew doesn't leave gaps at corners */
-  inset: -40px;
+  /* Expand horizontally enough to cover skew corners, but minimally vertically to zoom out */
+  top: -5px;
+  bottom: -5px;
+  left: -60px;
+  right: -60px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -599,7 +602,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 .category-large-card-overlay {
   position: absolute;
-  inset: -40px; /* Expand to match bg */
+  top: -5px;
+  bottom: -5px;
+  left: -60px;
+  right: -60px;
   background: linear-gradient(180deg, rgba(4,6,13,0.5) 0%, rgba(4,6,13,0.95) 100%);
   z-index: 1;
   /* Unskew overlay */
