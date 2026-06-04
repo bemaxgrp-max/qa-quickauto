@@ -242,7 +242,7 @@ export default function App() {
 
   // Lock body scroll when overlays open
   useEffect(() => {
-    const isOpen = !!activeList || filterOpen || !!zoomedImage;
+    const isOpen = !!activeList || filterOpen || !!zoomedImage || !!selectedItem;
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       document.body.classList.add('overlay-open');
@@ -254,7 +254,7 @@ export default function App() {
       document.body.style.overflow = '';
       document.body.classList.remove('overlay-open');
     };
-  }, [activeList, filterOpen, zoomedImage]);
+  }, [activeList, filterOpen, zoomedImage, selectedItem]);
 
   // Pull-to-refresh custom swipe logic
   useEffect(() => {

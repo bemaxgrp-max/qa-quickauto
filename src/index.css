@@ -79,6 +79,16 @@ body {
   z-index: 1;
 }
 
+.app-container > * {
+  transition: filter 0.28s cubic-bezier(0.4, 0, 0.2, 1), brightness 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Blur and dim background components when an overlay modal/drawer is open */
+body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):not(.image-zoom-overlay):not(.filter-backdrop) {
+  filter: blur(16px) brightness(0.45);
+  pointer-events: none;
+}
+
 /* Navbar */
 .navbar {
   display: flex;
@@ -1205,9 +1215,9 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(4, 6, 13, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(4, 6, 13, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 2000;
   display: flex;
   align-items: center;
