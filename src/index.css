@@ -1371,155 +1371,154 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 @media (max-width: 680px) {
   .modal-overlay {
-    padding: 0.5rem;
+    padding: 0;
   }
   
   .modal-container {
-    width: 100%;
-    max-height: calc(100vh - 1rem);
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
     overflow-y: auto;
-    border-radius: 16px;
+    box-shadow: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .modal-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.15fr;
-    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
   }
 
   .modal-left-column {
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-  }
-
-  [style*="direction: rtl"] .modal-left-column {
-    border-right: none;
-    border-left: 1px solid var(--border-color);
+    display: contents;
   }
 
   .modal-image-wrapper {
-    min-height: 120px;
-    height: 140px;
+    order: 1;
+    width: 100%;
+    height: 260px;
+    min-height: 260px;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--border-color);
   }
 
-  .modal-left-actions {
-    padding: 0.6rem;
-    gap: 0.6rem;
-  }
-
   .modal-right-column {
+    order: 2;
     display: flex;
     flex-direction: column;
   }
 
   .modal-right-top {
-    padding: 0.75rem;
+    padding: 1.25rem;
   }
 
   .modal-right-bottom {
-    padding: 0.75rem;
+    padding: 1.25rem;
     border-top: 1px solid var(--border-color);
   }
 
+  .modal-left-actions {
+    order: 3;
+    padding: 1.25rem;
+    border-top: 1px solid var(--border-color);
+    background: rgba(4, 6, 13, 0.4);
+  }
+
   .modal-title {
-    font-size: 0.95rem;
-    margin-bottom: 0.6rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
   }
 
   .modal-details-list {
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
   }
 
   .modal-detail-item {
-    font-size: 0.7rem;
-    padding: 0.25rem 0;
+    font-size: 0.85rem;
+    padding: 0.35rem 0;
   }
 
   /* Actions and Buttons scaled down for mobile */
   .modal-qty-control-row {
-    font-size: 0.75rem;
-    gap: 0.4rem;
+    font-size: 0.85rem;
+    gap: 0.75rem;
     justify-content: space-between;
+    margin-bottom: 0.5rem;
   }
 
   .qty-stepper {
-    scale: 0.85;
-    transform-origin: right center;
-  }
-
-  [style*="direction: rtl"] .qty-stepper {
-    transform-origin: left center;
+    scale: 1;
   }
 
   .modal-actions-row {
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
   }
 
   .modal-wa-btn, .modal-call-btn, .modal-cart-btn, .modal-wishlist-btn {
-    padding: 0.45rem 0.5rem;
-    font-size: 0.7rem;
-    height: 32px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.8rem;
+    height: 42px;
     justify-content: center;
   }
 
   .modal-wa-btn svg, .modal-call-btn svg, .modal-cart-btn svg, .modal-wishlist-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   .modal-btn-text {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
 
   /* Price and Discount rows scaled down */
   .modal-single-price-block, .modal-product-price-block {
-    margin-top: 0.6rem;
-    padding: 0.5rem;
-    border-radius: 8px;
+    margin-top: 0.8rem;
+    padding: 0.85rem;
+    border-radius: 10px;
   }
 
   .price-large {
-    font-size: 1.1rem !important;
+    font-size: 1.3rem !important;
   }
 
   .price-sub {
-    font-size: 0.7rem !important;
+    font-size: 0.8rem !important;
   }
 
   .price-matrix-grid, .discount-matrix-grid {
-    padding: 0.4rem;
-    gap: 0.35rem;
-    border-radius: 6px;
+    padding: 0.6rem;
+    gap: 0.5rem;
+    border-radius: 8px;
   }
 
   .section-title {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
   }
 
   .matrix-row {
-    padding: 0.3rem 0;
-    font-size: 0.7rem;
+    padding: 0.4rem 0;
+    font-size: 0.8rem;
   }
 
   .matrix-member-label {
-    gap: 0.3rem;
+    gap: 0.4rem;
   }
 
   .member-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
   }
 
   .matrix-member-discount {
-    gap: 0.2rem;
+    gap: 0.3rem;
   }
 
   .m-saved-desc {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
   }
 }
 
