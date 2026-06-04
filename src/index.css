@@ -92,12 +92,11 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 /* Navbar */
 .navbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  padding: 1.25rem clamp(1rem, 3vw, 3rem);
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 3vw, 3rem);
   background: rgba(4, 6, 13, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -108,21 +107,25 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* brand-and-filter stays a flex row */
-.brand-and-filter {
+.brand-and-search {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  justify-self: flex-start;
 }
 
-/* Search row wrapper (holds search input + mobile filter btn) */
-.header-search-row {
-  display: contents;
+.header-center-title {
+  text-align: center;
+  justify-self: center;
 }
 
-/* Desktop: filter btn inside brand-and-filter, mobile btn hidden */
-.filter-toggle-btn-header.filter-btn-desktop { display: flex; }
-.filter-toggle-btn-header.filter-btn-mobile  { display: none; }
+.header-center-title h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--brand-yellow);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
 
 
 .navbar-brand {
@@ -148,33 +151,13 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   letter-spacing: 0.5px;
 }
 
-.filter-toggle-btn-header {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-family: var(--font-family);
-  transition: var(--transition);
-}
 
-.filter-toggle-btn-header:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--brand-yellow);
-  color: var(--brand-yellow);
-  box-shadow: 0 0 10px rgba(255, 200, 61, 0.1);
-}
 
 .navbar-actions {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  justify-self: flex-end;
 }
 
 /* Exchange Rate Badge */
@@ -506,6 +489,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   padding: 1.5rem 1.5rem 5rem 1.5rem;
 }
 
+.catalog-wrapper:has(.categories-landing-container) {
+  padding-top: 0;
+}
+
 [style*="direction: rtl"] .catalog-wrapper {
   padding-right: 0;
   padding-left: 1.5rem;
@@ -519,7 +506,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 /* ─── Categories Landing Page ─── */
 .categories-landing-container {
   width: 100%;
-  padding: 1rem 0;
+  padding: 0;
 }
 
 .landing-categories-header {
@@ -1899,42 +1886,41 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   .rate-label-desktop { display: none; }
   .rate-label-mobile  { display: inline; }
 
-  /* Navbar becomes 2-row grid:
-     Row 1: brand (left) + actions (right)
-     Row 2: search + filter btn (full width) */
+  /* Navbar layout for mobile */
   .navbar {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    gap: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
     padding: 0.85rem 1rem;
   }
-
-  .brand-and-filter {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .navbar-actions {
-    grid-column: 2;
-    grid-row: 1;
-    gap: 0.4rem;
-  }
-
-  /* Search row spans full width on row 2 */
-  .header-search-row {
-    display: flex;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    gap: 0.5rem;
-    align-items: center;
+  
+  .brand-and-search {
+    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .header-search-box {
     flex: 1;
-    min-width: 0;
-    max-width: 100%;
+    min-width: 200px;
     margin: 0;
+  }
+
+  .header-center-title {
+    order: -1;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+  
+  .header-center-title h2 {
+    font-size: 1.2rem;
+  }
+
+  .navbar-actions {
+    align-self: flex-end;
+    gap: 0.4rem;
   }
 
   /* Rate badge compact */

@@ -553,26 +553,15 @@ export default function App() {
         </div>
       )}
 
-      {/* Overlay backdrop for filter */}
-      {filterOpen && <div className="filter-backdrop" onClick={() => setFilterOpen(false)} />}
-      
       {/* Top Header Navigation */}
-      <header className="navbar" ref={filterRef}>
-        <div className="brand-and-filter">
+      <header className="navbar">
+        <div className="brand-and-search">
           <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }}>
             <span className="brand-auto">AUTO</span>
             <span className="brand-space"> </span>
             <span className="brand-quick">QUICK</span>
           </div>
-          {/* Filter btn visible on desktop inside brand row */}
-          <button className="filter-toggle-btn-header filter-btn-desktop" onClick={() => setFilterOpen(!filterOpen)}>
-            <Grid size={16} />
-            <span>{lang === 'ar' ? 'الفلتر' : 'Filter'}</span>
-          </button>
-        </div>
-        
-        {/* Search box + mobile filter button */}
-        <div className="header-search-row">
+          
           <div className="header-search-box">
             <Search className="header-search-icon" size={16} />
             <input
@@ -583,11 +572,13 @@ export default function App() {
               className="header-search-input"
             />
           </div>
-          {/* Filter btn visible on mobile beside search */}
-          <button className="filter-toggle-btn-header filter-btn-mobile" onClick={() => setFilterOpen(!filterOpen)}>
-            <Grid size={16} />
-          </button>
         </div>
+
+        {viewMode === 'categories' && (
+          <div className="header-center-title">
+            <h2>{lang === 'ar' ? 'تصفح أقسام الكاتالوج' : 'Browse Catalog Categories'}</h2>
+          </div>
+        )}
         
 
         <div className="navbar-actions">
@@ -635,49 +626,12 @@ export default function App() {
           </span>
         </div>
 
-        {/* Dropdown containing category cards */}
-        {filterOpen && (
-          <div className="header-filter-dropdown">
-            <div className="header-filter-dropdown-content">
-              {CATEGORIES[lang].map((cat) => {
-                // Filter items for this category
-                const catItems = items.filter(item => matchesCategory(item, cat.val));
-
-                const bgImg = getCategoryBgImage(cat.val);
-
-                return (
-                  <div
-                    key={cat.val}
-                    className={`category-dropdown-card ${selectedCategory === cat.val ? 'active-cat' : ''}`}
-                    style={{ backgroundImage: `url(${bgImg})` }}
-                    onClick={() => {
-                      setSelectedCategory(cat.val);
-                      setViewMode('items');
-                      setFilterOpen(false);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    <div className="category-card-overlay"></div>
-                    <div className="category-card-content">
-                      <h4>{cat.label}</h4>
-                      <span className="cat-count-badge">{catItems.length}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Main Section */}
       <main className="catalog-wrapper">
         {viewMode === 'categories' ? (
           <div className="categories-landing-container">
-            <div className="landing-categories-header">
-              <h2>{lang === 'ar' ? 'تصفح أقسام الكاتالوج' : 'Browse Catalog Categories'}</h2>
-              <p>{lang === 'ar' ? 'اختر قسماً لعرض المواد والخدمات المتاحة مباشرة' : 'Select a category to view available items instantly'}</p>
-            </div>
             <div className="categories-grid">
               {CATEGORIES[lang].map((cat) => {
                 const catCount = items.filter(item => matchesCategory(item, cat.val)).length;
