@@ -140,13 +140,13 @@ const getCategoryBgImage = (val: string) => {
 const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
   type D = { img: string; descAr: string; descEn: string };
   const m: Record<string, D> = {
-    ALL: { img: '/all-categories.png', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
+    ALL: { img: '/cat-all.jpg', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
     SPARE_PARTS: { img: '/cat-spare-parts.jpg', descAr: 'فلاتر، بواجي، مساعدات، طرمبات، دوزان وميكانيك عام', descEn: 'Filters, spark plugs, shocks, pumps, and general mechanical parts' },
     OILS: { img: '/cat-oils.jpg', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
     TIRES: { img: '/cat-tires.jpg', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
     BATTERIES: { img: '/cat-batteries.jpg', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
     SERVICES: { img: '/cat-services.jpg', descAr: 'غسيل وتلميع، فحص كمبيوتر، برمجة، وصيانة كهربائية وفنية', descEn: 'Washing, computer scan, programming, electrical & tech services' },
-    OTHER: { img: '/cat-other.jpg', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
+    OTHER: { img: '/cat-other.png', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
   };
   return m[val] || m['OTHER'];
 };
@@ -684,7 +684,7 @@ export default function App() {
                 const details = getCategoryDetails(cat.val, lang);
                 return (
                   <div key={cat.val} 
-                    className={`category-large-card${['ALL','OILS','TIRES','BATTERIES','SERVICES'].includes(cat.val) ? ' card-light-bg' : ''}`}
+                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
                     style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                     <div className="category-large-card-overlay" />
