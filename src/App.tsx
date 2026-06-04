@@ -262,7 +262,7 @@ export default function App() {
     let isPulling = false;
 
     const onTouchStart = (e: TouchEvent) => {
-      const isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+      const isAtTop = window.scrollY <= 0 && document.documentElement.scrollTop <= 0 && document.body.scrollTop <= 0;
       const noOverlay = !activeList && !filterOpen && !zoomedImage && !selectedItem;
       if (isAtTop && noOverlay) {
         startY = e.touches[0].clientY;
@@ -278,6 +278,8 @@ export default function App() {
       const diffY = currentY - startY;
 
       if (diffY > 0) {
+        // Prevent native bounce or pull-to-refresh
+        if (e.cancelable) e.preventDefault();
         const resisted = Math.pow(diffY, 0.82);
         setPullOffset(resisted);
       } else {
@@ -292,7 +294,7 @@ export default function App() {
       const endY = e.changedTouches[0].clientY;
       const diffY = endY - startY;
       const resisted = Math.pow(Math.max(0, diffY), 0.82);
-      if (resisted > 95) {
+      if (resisted > 60) {
         window.location.reload();
       } else {
         setPullOffset(0);
@@ -300,7 +302,7 @@ export default function App() {
     };
 
     window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
@@ -447,7 +449,7 @@ export default function App() {
             opacity: Math.min(pullOffset / 75, 1)
           }}
         >
-          <div className={`ptr-icon-arrow ${pullOffset > 90 ? 'rotate' : ''}`}>
+          <div className={`ptr-icon-arrow ${pullOffset > 55 ? 'rotate' : ''}`}>
             ↓
           </div>
         </div>

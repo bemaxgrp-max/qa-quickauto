@@ -1923,3 +1923,18 @@ body {
   color: var(--color-success) !important;
 }
 
+/* Hide developer/debug tools entry buttons (like Eruda, vConsole) injected by webviews or mobile browsers */
+#eruda, 
+.eruda-entry-btn, 
+eruda,
+[id^="eruda"],
+[class^="eruda"],
+.__vconsole, 
+.vc-switch {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
