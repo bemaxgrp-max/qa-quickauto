@@ -571,7 +571,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   bottom: -5px;
   left: -60px;
   right: -60px;
-  background-size: cover;
+  background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
   /* Unskew the background image */
