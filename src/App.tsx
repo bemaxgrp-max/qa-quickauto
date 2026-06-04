@@ -31,7 +31,7 @@ const CATEGORIES = {
     { val: 'OILS', label: 'زيوت وسوائل' },
     { val: 'ACCESSORIES', label: 'إكسسوارات' },
     { val: 'TIRES', label: 'إطارات وبطاريات' },
-    { val: 'SERVICES', label: 'الخدمات الفنية' },
+    { val: 'SERVICES', label: 'قاعدة الخدمات' },
     { val: 'OTHER', label: 'تصنيفات أخرى' }
   ],
   en: [
