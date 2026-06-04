@@ -489,9 +489,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 .catalog-wrapper {
   flex: 1;
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
   margin: 0;
   padding: 1.5rem 1.5rem 5rem 1.5rem;
+  overflow-x: hidden;
 }
 
 .catalog-wrapper.catalog-categories-mode {
@@ -517,14 +518,15 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 /* ─── Categories Landing Page ─── */
 .categories-landing-container {
-  width: 92%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 1rem; /* Prevent hitting screen edges */
 }
 @media (max-width: 1024px) {
   .categories-landing-container {
-    width: 95%;
+    width: 100%;
+    padding: 0 0.5rem;
   }
 }
 
