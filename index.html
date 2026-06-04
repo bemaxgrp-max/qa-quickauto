@@ -10,6 +10,45 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d1426" />
     <title>QUICK AUTO | دليل قطع الغيار والملحقات</title>
+    <script>
+      (function() {
+        function cleanup() {
+          var selectors = [
+            '#eruda', '.eruda-entry-btn', '.eruda-container', 'eruda',
+            '[id*="eruda"]', '[class*="eruda"]', '.vc-switch', '#__vconsole',
+            '#vConsole', '.vconsole-container'
+          ];
+          selectors.forEach(function(sel) {
+            try {
+              var els = document.querySelectorAll(sel);
+              for (var i = 0; i < els.length; i++) {
+                var p = els[i].parentNode;
+                if (p) p.removeChild(els[i]);
+              }
+            } catch (e) {}
+          });
+
+          var all = document.getElementsByTagName('*');
+          for (var j = 0; j < all.length; j++) {
+            var el = all[j];
+            if (el.shadowRoot) {
+              var entry = el.shadowRoot.querySelector('.eruda-entry-btn');
+              if (entry) {
+                var p = el.parentNode;
+                if (p) p.removeChild(el);
+              }
+            }
+          }
+        }
+        try {
+          cleanup();
+          var observer = new MutationObserver(function() { cleanup(); });
+          observer.observe(document.documentElement, { childList: true, subtree: true });
+          window.addEventListener('load', cleanup);
+          document.addEventListener('DOMContentLoaded', cleanup);
+        } catch (err) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
