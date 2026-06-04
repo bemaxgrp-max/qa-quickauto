@@ -1226,7 +1226,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 
 .modal-container {
-  width: 750px;
+  width: 850px;
   max-width: 100%;
   background: rgba(13, 20, 38, 0.95);
   backdrop-filter: blur(25px);
@@ -1964,17 +1964,22 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   align-items: center;
   gap: 0.5rem;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .member-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 .matrix-member-discount {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .m-pct {
   color: var(--color-success);

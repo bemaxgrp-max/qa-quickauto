@@ -901,40 +901,42 @@ export default function App() {
                       {lang === 'ar' ? `المتوفر: ${selectedItem.quantity} قطعة` : `Available: ${selectedItem.quantity} pcs`}
                     </span>
                   )}
-                  <span className="modal-image-hint">{lang === 'ar' ? '👆 اضغط لتكبير الصورة' : '👆 Tap to zoom'}</span>
+                  {!selectedItem.isService && (
+                    <span className="modal-image-hint">{lang === 'ar' ? '👆 اضغط لتكبير الصورة' : '👆 Tap to zoom'}</span>
+                  )}
                 </div>
 
                 <div className="modal-left-actions">
                   {/* Quantity Stepper */}
-                  <div className="modal-qty-control-row">
-                    <span className="qty-label">
-                      {selectedItem.isService 
-                        ? (lang === 'ar' ? 'العدد المطلوب:' : 'Qty:') 
-                        : (lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Qty:')}
-                    </span>
-                    <div className="qty-stepper" style={{ direction: 'ltr' }}>
-                      <button 
-                        className="qty-btn" 
-                        onClick={() => handleChangeQty(selectedItem.id, -1)}
-                        disabled={!(cart[selectedItem.id] > 0)}
-                      >
-                        ▼
-                      </button>
-                      <span className="qty-val">{cart[selectedItem.id] || 0}</span>
-                      <button 
-                        className="qty-btn" 
-                        onClick={() => {
-                          if (!(cart[selectedItem.id] > 0)) {
-                            handleToggleCart(selectedItem.id);
-                          } else {
-                            handleChangeQty(selectedItem.id, 1);
-                          }
-                        }}
-                      >
-                        ▲
-                      </button>
+                  {!selectedItem.isService && (
+                    <div className="modal-qty-control-row">
+                      <span className="qty-label">
+                        {lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Qty:'}
+                      </span>
+                      <div className="qty-stepper" style={{ direction: 'ltr' }}>
+                        <button 
+                          className="qty-btn" 
+                          onClick={() => handleChangeQty(selectedItem.id, -1)}
+                          disabled={!(cart[selectedItem.id] > 0)}
+                        >
+                          ▼
+                        </button>
+                        <span className="qty-val">{cart[selectedItem.id] || 0}</span>
+                        <button 
+                          className="qty-btn" 
+                          onClick={() => {
+                            if (!(cart[selectedItem.id] > 0)) {
+                              handleToggleCart(selectedItem.id);
+                            } else {
+                              handleChangeQty(selectedItem.id, 1);
+                            }
+                          }}
+                        >
+                          ▲
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Actions Row */}
                   <div className="modal-actions-row">
@@ -973,7 +975,11 @@ export default function App() {
                     >
                       <ShoppingCart size={18} />
                       <span className="modal-btn-text">
-                        {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? `في السلة (${cart[selectedItem.id]})` : `Cart (${cart[selectedItem.id]})`) : (lang === 'ar' ? 'السلة' : 'Cart')}
+                        {(cart[selectedItem.id]||0)>0 
+                          ? (selectedItem.isService 
+                              ? (lang === 'ar' ? 'في السلة' : 'In Cart') 
+                              : (lang === 'ar' ? `في السلة (${cart[selectedItem.id]})` : `Cart (${cart[selectedItem.id]})`)) 
+                          : (lang === 'ar' ? 'السلة' : 'Cart')}
                       </span>
                     </button>
 
@@ -1001,18 +1007,7 @@ export default function App() {
                     <div className="modal-details-list">
                       <div className="modal-detail-item">
                         <span className="detail-label">{lang === 'ar' ? 'كود الخدمة:' : 'Service Code:'}</span>
-                        <div className="detail-value oem-copy-wrapper">
-                          <span>{selectedItem.barcode}</span>
-                          <button 
-                            className="modal-copy-btn" 
-                            onClick={() => {
-                              navigator.clipboard.writeText(selectedItem.barcode);
-                              alert(lang === 'ar' ? 'تم نسخ الكود!' : 'Code copied!');
-                            }}
-                          >
-                            {lang === 'ar' ? 'نسخ' : 'Copy'}
-                          </button>
-                        </div>
+                        <span className="detail-value">{selectedItem.barcode}</span>
                       </div>
                       <div className="modal-detail-item">
                         <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
@@ -1115,9 +1110,9 @@ export default function App() {
                         <h4 className="section-title">{lang === 'ar' ? '💎 نسبة الخصومات لأصحاب العضوية المعتمدة:' : '💎 Membership Tier Discounts:'}</h4>
                         <div className="discount-matrix-grid">
                           {[
-                            { tier: 'silver', labelAr: 'العضوية الفضية (Silver)', labelEn: 'Silver Member', pct: selectedItem.silver_discount_percent ?? 10, color: '#aaa' },
-                            { tier: 'gold', labelAr: 'العضوية الذهبية (Gold)', labelEn: 'Gold Member', pct: selectedItem.gold_discount_percent ?? 15, color: 'var(--brand-yellow)' },
-                            { tier: 'platinum', labelAr: 'العضوية البلاتينية (Platinum)', labelEn: 'Platinum Member', pct: selectedItem.platinum_discount_percent ?? 20, color: '#e74c3c' }
+                            { tier: 'silver', labelAr: 'العضوية الفضية', labelEn: 'Silver Member', pct: selectedItem.silver_discount_percent ?? 10, color: '#aaa' },
+                            { tier: 'gold', labelAr: 'العضوية الذهبية', labelEn: 'Gold Member', pct: selectedItem.gold_discount_percent ?? 15, color: 'var(--brand-yellow)' },
+                            { tier: 'platinum', labelAr: 'العضوية البلاتينية', labelEn: 'Platinum Member', pct: selectedItem.platinum_discount_percent ?? 20, color: '#e74c3c' }
                           ].map(m => {
                             const basePrice = selectedItem.selling_price_usd;
                             const discountAmountUsd = basePrice * (m.pct / 100);
