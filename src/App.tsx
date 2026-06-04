@@ -137,7 +137,7 @@ const getCategoryBgImage = (val: string) => {
   }
 };
 
-const getCategoryDetails = (val: string, lang: 'ar' | 'en') => {
+const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
   type D = { img: string; descAr: string; descEn: string };
   const m: Record<string, D> = {
     ALL: { img: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=600&q=80', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
@@ -418,13 +418,7 @@ export default function App() {
       return false;
     };
 
-    const isTires = () => {
-      if (match(cat, ['إطارات وبطاريات', 'إطارات', 'بطاريات', 'بطارية', 'إطار', 'tire', 'tires', 'battery', 'batteries'])) return true;
-      if (!cat) {
-        return match(name, ['إطار', 'اطار', 'بطارية', 'بطاريه', 'دولاب', 'عجل', 'تير', 'tire', 'wheel', 'battery']);
-      }
-      return false;
-    };
+
 
     const isTiresOnly = () => {
       if (match(cat, ['إطارات', 'إطار', 'tire', 'tires'])) return true;
