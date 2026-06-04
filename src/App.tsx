@@ -141,12 +141,12 @@ const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
   type D = { img: string; descAr: string; descEn: string };
   const m: Record<string, D> = {
     ALL: { img: '/all-categories.png', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
-    SPARE_PARTS: { img: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=600&q=80', descAr: 'فلاتر، بواجي، مساعدات، طرمبات، دوزان وميكانيك عام', descEn: 'Filters, spark plugs, shocks, pumps, and general mechanical parts' },
-    OILS: { img: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
-    TIRES: { img: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=600&q=80', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
-    BATTERIES: { img: 'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?auto=format&fit=crop&w=600&q=80', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
-    SERVICES: { img: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=600&q=80', descAr: 'غسيل وتلميع، فحص كمبيوتر، برمجة، وصيانة كهربائية وفنية', descEn: 'Washing, computer scan, programming, electrical & tech services' },
-    OTHER: { img: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=600&q=80', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
+    SPARE_PARTS: { img: '/cat-spare-parts.jpg', descAr: 'فلاتر، بواجي، مساعدات، طرمبات، دوزان وميكانيك عام', descEn: 'Filters, spark plugs, shocks, pumps, and general mechanical parts' },
+    OILS: { img: '/cat-oils.jpg', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
+    TIRES: { img: '/cat-tires.jpg', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
+    BATTERIES: { img: '/cat-batteries.jpg', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
+    SERVICES: { img: '/cat-services.jpg', descAr: 'غسيل وتلميع، فحص كمبيوتر، برمجة، وصيانة كهربائية وفنية', descEn: 'Washing, computer scan, programming, electrical & tech services' },
+    OTHER: { img: '/cat-other.jpg', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
   };
   return m[val] || m['OTHER'];
 };
@@ -683,12 +683,12 @@ export default function App() {
                 const catCount = items.filter(item => matchesCategory(item, cat.val)).length;
                 const details = getCategoryDetails(cat.val, lang);
                 return (
-                  <div key={cat.val} className={`category-large-card${cat.val === 'ALL' ? ' card-all' : ''}`}
+                  <div key={cat.val} 
+                    className={`category-large-card${['ALL','OILS','TIRES','BATTERIES','SERVICES'].includes(cat.val) ? ' card-light-bg' : ''}`}
                     style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                     <div className="category-large-card-overlay" />
                     <div className="category-large-card-content">
-                      <div className="cat-card-icon">{cat.val === 'ALL' ? '' : cat.val === 'SPARE_PARTS' ? '⚙️' : cat.val === 'OILS' ? '🛢️' : cat.val === 'TIRES' ? '🔄' : cat.val === 'BATTERIES' ? '🔋' : cat.val === 'SERVICES' ? '🔨' : '📦'}</div>
                       <h3>{cat.label}</h3>
                       <span className="cat-card-count">{catCount} {lang === 'ar' ? 'عنصر' : 'items'}</span>
                       <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>
