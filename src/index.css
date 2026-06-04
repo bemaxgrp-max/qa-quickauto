@@ -539,22 +539,31 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   overflow: hidden;
   cursor: pointer;
   min-height: 180px;
-  background-size: cover;
-  background-position: center;
   background-color: #0d1426;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 6px 28px rgba(0,0,0,0.45);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  transform: translateZ(0);
+  /* Skewing the card for a premium dynamic look */
+  transform: skewX(-12deg) translateZ(0);
+  /* slight left and right margin to not clip the slanted edges on smaller screens */
+  margin: 0 0.2rem;
 }
 
+.category-card-bg {
+  position: absolute;
+  /* Expand inset so unskew doesn't leave gaps at corners */
+  inset: -40px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Unskew the background image */
+  transform: skewX(12deg);
+  transition: transform 0.4s ease;
+}
 
 /* Special style for cards with light/white background images */
 .category-large-card.card-light-bg {
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
   background-color: #f0f4f8;
 }
 
@@ -567,15 +576,20 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 
 .category-large-card:hover {
-  transform: translateY(-5px) scale(1.02);
+  transform: skewX(-12deg) translateY(-5px) scale(1.02);
   box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 2px var(--brand-yellow);
+}
+.category-large-card:hover .category-card-bg {
+  transform: skewX(12deg) scale(1.05);
 }
 
 .category-large-card-overlay {
   position: absolute;
-  inset: 0;
+  inset: -40px; /* Expand to match bg */
   background: linear-gradient(180deg, rgba(4,6,13,0.5) 0%, rgba(4,6,13,0.95) 100%);
   z-index: 1;
+  /* Unskew overlay */
+  transform: skewX(12deg);
 }
 
 .category-large-card-content {
@@ -586,6 +600,8 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   flex-direction: column;
   height: 100%;
   justify-content: flex-end;
+  /* Unskew text content */
+  transform: skewX(12deg);
 }
 
 .cat-card-icon {

@@ -631,9 +631,11 @@ export default function App() {
                 return (
                   <div key={cat.val} 
                     className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
-                    style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                    
+                    <div className="category-card-bg" style={{ backgroundImage: `url(${details.img})` }} />
                     <div className="category-large-card-overlay" />
+                    
                     <div className="category-large-card-content">
                       <h3>
                         {cat.label} 
