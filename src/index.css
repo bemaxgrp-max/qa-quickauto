@@ -559,7 +559,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 
 .category-large-card.card-light-bg .category-large-card-overlay {
-  background: linear-gradient(180deg, rgba(2,6,18,0.05) 25%, rgba(2,6,18,0.92) 100%);
+  background: linear-gradient(180deg, rgba(2,6,18,0.5) 0%, rgba(2,6,18,0.95) 100%);
 }
 .category-large-card.card-light-bg .category-large-card-content h3,
 .category-large-card.card-light-bg .cat-card-desc {
@@ -574,7 +574,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 .category-large-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(4,6,13,0.1) 0%, rgba(4,6,13,0.82) 100%);
+  background: linear-gradient(180deg, rgba(4,6,13,0.5) 0%, rgba(4,6,13,0.95) 100%);
   z-index: 1;
 }
 
