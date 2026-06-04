@@ -127,7 +127,7 @@ const getCategoryImageUrl = (category: string | null, name: string) => {
 
 const getCategoryBgImage = (val: string) => {
   switch (val) {
-    case 'ALL': return 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=400&q=80';
+    case 'ALL': return '/all-categories.png';
     case 'SPARE_PARTS': return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
     case 'OILS': return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
     case 'TIRES': return 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=400&q=80';
@@ -140,7 +140,7 @@ const getCategoryBgImage = (val: string) => {
 const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
   type D = { img: string; descAr: string; descEn: string };
   const m: Record<string, D> = {
-    ALL: { img: 'https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=800&q=80', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
+    ALL: { img: '/all-categories.png', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
     SPARE_PARTS: { img: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=600&q=80', descAr: 'فلاتر، بواجي، مساعدات، طرمبات، دوزان وميكانيك عام', descEn: 'Filters, spark plugs, shocks, pumps, and general mechanical parts' },
     OILS: { img: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
     TIRES: { img: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=600&q=80', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
@@ -683,12 +683,12 @@ export default function App() {
                 const catCount = items.filter(item => matchesCategory(item, cat.val)).length;
                 const details = getCategoryDetails(cat.val, lang);
                 return (
-                  <div key={cat.val} className="category-large-card"
+                  <div key={cat.val} className={`category-large-card${cat.val === 'ALL' ? ' card-all' : ''}`}
                     style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                     <div className="category-large-card-overlay" />
                     <div className="category-large-card-content">
-                      <div className="cat-card-icon">{cat.val === 'ALL' ? '🔧' : cat.val === 'SPARE_PARTS' ? '⚙️' : cat.val === 'OILS' ? '🛢️' : cat.val === 'TIRES' ? '🔄' : cat.val === 'BATTERIES' ? '🔋' : cat.val === 'SERVICES' ? '🔨' : '📦'}</div>
+                      <div className="cat-card-icon">{cat.val === 'ALL' ? '' : cat.val === 'SPARE_PARTS' ? '⚙️' : cat.val === 'OILS' ? '🛢️' : cat.val === 'TIRES' ? '🔄' : cat.val === 'BATTERIES' ? '🔋' : cat.val === 'SERVICES' ? '🔨' : '📦'}</div>
                       <h3>{cat.label}</h3>
                       <span className="cat-card-count">{catCount} {lang === 'ar' ? 'عنصر' : 'items'}</span>
                       <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>

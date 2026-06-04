@@ -518,22 +518,19 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 /* ─── Categories Landing Page ─── */
 .categories-landing-container {
   width: 100%;
-  padding: 0.5rem 0;
-  min-height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
+  padding: 1rem 0;
 }
 
 .landing-categories-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .landing-categories-header h2 {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--brand-yellow);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
 }
 
@@ -542,19 +539,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   color: var(--text-secondary);
 }
 
-/* Desktop: 4 cols for first row (ALL spans 2), then 3+3 */
 .categories-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: auto auto;
-  gap: 1rem;
-  flex: 1;
-}
-
-/* First card (الكل) spans 2 columns and is taller */
-.categories-grid .category-large-card:first-child {
-  grid-column: span 2;
-  min-height: 300px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
 }
 
 .category-large-card {
@@ -562,34 +550,45 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
-  min-height: 240px;
+  min-height: 280px;
   background-size: cover;
   background-position: center;
-  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s ease;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  background-color: #0d1426;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.45);
+}
+
+/* Special style for ALL card — illustration on white/light bg */
+.category-large-card.card-all {
+  background-size: 80%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-color: #eaf3fb;
+}
+.category-large-card.card-all .category-large-card-overlay {
+  background: linear-gradient(180deg, rgba(2,6,18,0) 30%, rgba(2,6,18,0.88) 100%);
+}
+.category-large-card.card-all .category-large-card-content h3,
+.category-large-card.card-all .cat-card-desc {
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
 }
 
 .category-large-card:hover {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.65), 0 0 0 2px var(--brand-yellow);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 2px var(--brand-yellow);
 }
 
 .category-large-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(4,6,13,0.05) 0%, rgba(4,6,13,0.75) 70%, rgba(4,6,13,0.92) 100%);
+  background: linear-gradient(180deg, rgba(4,6,13,0.1) 0%, rgba(4,6,13,0.82) 100%);
   z-index: 1;
-  transition: background 0.3s ease;
-}
-
-.category-large-card:hover .category-large-card-overlay {
-  background: linear-gradient(160deg, rgba(4,6,13,0.1) 0%, rgba(4,6,13,0.65) 70%, rgba(4,6,13,0.88) 100%);
 }
 
 .category-large-card-content {
   position: relative;
   z-index: 2;
-  padding: 1.6rem 1.4rem;
+  padding: 1.4rem 1.2rem;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -597,49 +596,36 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 
 .cat-card-icon {
-  font-size: 2.2rem;
-  margin-bottom: 0.6rem;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
-  transition: transform 0.3s ease;
-}
-
-.category-large-card:hover .cat-card-icon {
-  transform: scale(1.15);
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
 .category-large-card-content h3 {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #fff;
   margin-bottom: 0.4rem;
   letter-spacing: -0.01em;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-}
-
-/* ALL card gets bigger title */
-.categories-grid .category-large-card:first-child .category-large-card-content h3 {
-  font-size: 1.7rem;
 }
 
 .cat-card-count {
   display: inline-block;
-  background: rgba(255, 200, 61, 0.18);
+  background: rgba(255, 200, 61, 0.2);
   border: 1px solid rgba(255, 200, 61, 0.4);
   color: var(--brand-yellow);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.22rem 0.65rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 20px;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.5rem;
   width: fit-content;
-  backdrop-filter: blur(4px);
 }
 
 .cat-card-desc {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: rgba(241, 245, 249, 0.82);
   line-height: 1.5;
-  max-width: 380px;
 }
 
 /* ─── Items View Header ─── */
@@ -1105,45 +1091,26 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   }
 }
 
-/* ─── Responsive: Category Cards ─── */
-@media (max-width: 1200px) {
-  .categories-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .categories-grid .category-large-card:first-child {
-    grid-column: span 3;
-    min-height: 280px;
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-  .categories-grid .category-large-card:first-child {
-    grid-column: span 2;
-    min-height: 200px;
+    gap: 1rem;
   }
   .category-large-card {
-    min-height: 170px;
+    min-height: 230px;
   }
-  .category-large-card-content h3 {
-    font-size: 1rem;
+}
+
+@media (max-width: 500px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
   }
-  .categories-grid .category-large-card:first-child .category-large-card-content h3 {
-    font-size: 1.2rem;
-  }
-  .cat-card-desc {
-    display: none;
-  }
-  .cat-card-icon {
-    font-size: 1.6rem;
+  .category-large-card {
+    min-height: 180px;
   }
 }
 
 @media (max-width: 768px) {
-
   .navbar {
     padding: 1rem 1.5rem;
     justify-content: center;
