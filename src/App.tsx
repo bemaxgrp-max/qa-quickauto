@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
-  Grid, Heart, ShoppingCart
+  Heart, ShoppingCart
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -123,18 +123,6 @@ const getCategoryImageUrl = (category: string | null, name: string) => {
     return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
   }
   return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
-};
-
-const getCategoryBgImage = (val: string) => {
-  switch (val) {
-    case 'ALL': return '/all-categories.png';
-    case 'SPARE_PARTS': return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
-    case 'OILS': return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
-    case 'TIRES': return 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=400&q=80';
-    case 'BATTERIES': return 'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?auto=format&fit=crop&w=400&q=80';
-    case 'SERVICES': return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
-    default: return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
-  }
 };
 
 const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
