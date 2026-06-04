@@ -903,37 +903,6 @@ export default function App() {
                 </div>
 
                 <div className="modal-left-actions">
-                  {/* Quantity Stepper */}
-                  {!selectedItem.isService && (
-                    <div className="modal-qty-control-row">
-                      <span className="qty-label">
-                        {lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Qty:'}
-                      </span>
-                      <div className="qty-stepper" style={{ direction: 'ltr' }}>
-                        <button 
-                          className="qty-btn" 
-                          onClick={() => handleChangeQty(selectedItem.id, -1)}
-                          disabled={!(cart[selectedItem.id] > 0)}
-                        >
-                          ▼
-                        </button>
-                        <span className="qty-val">{cart[selectedItem.id] || 0}</span>
-                        <button 
-                          className="qty-btn" 
-                          onClick={() => {
-                            if (!(cart[selectedItem.id] > 0)) {
-                              handleToggleCart(selectedItem.id);
-                            } else {
-                              handleChangeQty(selectedItem.id, 1);
-                            }
-                          }}
-                        >
-                          ▲
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Actions Row */}
                   <div className="modal-actions-row">
                     <a
@@ -964,20 +933,49 @@ export default function App() {
                       <span className="modal-btn-text">{lang === 'ar' ? 'اتصال' : 'Call'}</span>
                     </a>
                     
-                    <button 
-                      className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
-                      onClick={() => handleToggleCart(selectedItem.id)}
-                      title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
-                    >
-                      <ShoppingCart size={18} />
-                      <span className="modal-btn-text">
-                        {(cart[selectedItem.id]||0)>0 
-                          ? (selectedItem.isService 
-                              ? (lang === 'ar' ? 'في السلة' : 'In Cart') 
-                              : (lang === 'ar' ? `في السلة (${cart[selectedItem.id]})` : `Cart (${cart[selectedItem.id]})`)) 
-                          : (lang === 'ar' ? 'السلة' : 'Cart')}
-                      </span>
-                    </button>
+                    {!selectedItem.isService ? (
+                      <div className="modal-cart-control-group">
+                        <button 
+                          className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart compact' : ''}`}
+                          onClick={() => handleToggleCart(selectedItem.id)}
+                          title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
+                        >
+                          <ShoppingCart size={18} />
+                          <span className="modal-btn-text">
+                            {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'في السلة' : 'In Cart') : (lang === 'ar' ? 'السلة' : 'Cart')}
+                          </span>
+                        </button>
+                        
+                        {(cart[selectedItem.id]||0) > 0 && (
+                          <div className="qty-stepper compact-stepper" style={{ direction: 'ltr' }}>
+                            <button 
+                              className="qty-btn" 
+                              onClick={() => handleChangeQty(selectedItem.id, -1)}
+                            >
+                              ▼
+                            </button>
+                            <span className="qty-val">{cart[selectedItem.id]}</span>
+                            <button 
+                              className="qty-btn" 
+                              onClick={() => handleChangeQty(selectedItem.id, 1)}
+                            >
+                              ▲
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button 
+                        className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
+                        onClick={() => handleToggleCart(selectedItem.id)}
+                        title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
+                      >
+                        <ShoppingCart size={18} />
+                        <span className="modal-btn-text">
+                          {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'في السلة' : 'In Cart') : (lang === 'ar' ? 'السلة' : 'Cart')}
+                        </span>
+                      </button>
+                    )}
 
                     <button 
                       className={`modal-wishlist-btn ${wishlist.includes(selectedItem.id) ? 'active' : ''}`}

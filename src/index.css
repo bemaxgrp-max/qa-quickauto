@@ -2138,3 +2138,61 @@ eruda,
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Integrated Cart & Stepper styling */
+.modal-cart-control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.modal-cart-btn.compact {
+  flex: 1 !important;
+  padding: 0.5rem 0.25rem !important;
+  min-width: 0;
+}
+
+.compact-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  height: 48px; /* Matches default modal action button height */
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+}
+
+.compact-stepper .qty-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: var(--transition);
+}
+
+.compact-stepper .qty-btn:hover:not(:disabled) {
+  color: var(--brand-yellow);
+}
+
+.compact-stepper .qty-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--brand-yellow);
+  min-width: 24px;
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .compact-stepper {
+    height: 42px; /* Matches mobile button height */
+  }
+}
