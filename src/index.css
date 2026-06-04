@@ -579,16 +579,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
 .category-card-bg {
   position: absolute;
-  /* Expand horizontally enough to cover skew corners, but minimally vertically to zoom out */
-  top: -5px;
-  bottom: -5px;
-  left: -60px;
-  right: -60px;
+  inset: -5px;
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
-  /* Unskew the background image */
-  transform: skewX(12deg);
   transition: transform 0.4s ease;
 }
 
@@ -610,19 +604,14 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 2px var(--brand-yellow);
 }
 .category-large-card:hover .category-card-bg {
-  transform: skewX(12deg) scale(1.05);
+  transform: scale(1.05);
 }
 
 .category-large-card-overlay {
   position: absolute;
-  top: -5px;
-  bottom: -5px;
-  left: -60px;
-  right: -60px;
+  inset: -5px;
   background: linear-gradient(180deg, rgba(4,6,13,0.5) 0%, rgba(4,6,13,0.95) 100%);
   z-index: 1;
-  /* Unskew overlay */
-  transform: skewX(12deg);
 }
 
 .category-large-card-content {
