@@ -533,11 +533,6 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   gap: 1.25rem;
 }
 
-.category-other-card {
-  grid-column: 1 / -1;
-  min-height: 140px !important;
-}
-
 .category-large-card {
   position: relative;
   border-radius: 20px;
@@ -616,8 +611,9 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   font-weight: 700;
   padding: 0.2rem 0.55rem;
   border-radius: 20px;
-  margin-bottom: 0.5rem;
   width: fit-content;
+  vertical-align: middle;
+  line-height: 1;
 }
 
 .cat-card-desc {

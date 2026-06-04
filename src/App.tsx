@@ -32,6 +32,7 @@ const CATEGORIES = {
     { val: 'TIRES', label: 'الاطارات' },
     { val: 'BATTERIES', label: 'البطاريات' },
     { val: 'SERVICES', label: 'الخدمات' },
+    { val: 'ACCESSORIES', label: 'اكسسوارات السيارات' },
     { val: 'OTHER', label: 'تصنيفات اخرى' }
   ],
   en: [
@@ -41,6 +42,7 @@ const CATEGORIES = {
     { val: 'TIRES', label: 'Tires' },
     { val: 'BATTERIES', label: 'Batteries' },
     { val: 'SERVICES', label: 'Services' },
+    { val: 'ACCESSORIES', label: 'Car Accessories' },
     { val: 'OTHER', label: 'Other Categories' }
   ]
 };
@@ -133,7 +135,8 @@ const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
     OILS: { img: '/cat-oils.jpg', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
     TIRES: { img: '/cat-tires.jpg', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
     BATTERIES: { img: '/cat-batteries.jpg', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
-    SERVICES: { img: '/cat-services.jpg', descAr: 'غسيل وتلميع، فحص كمبيوتر، برمجة، وصيانة كهربائية وفنية', descEn: 'Washing, computer scan, programming, electrical & tech services' },
+    SERVICES: { img: '/cat-services.jpg', descAr: 'دوزان الكتروني - ترصيص الكتروني - تبديل اطارات - تبديل زيوت وسوائل - صيانة المكيف ...الخ', descEn: 'Electronic wheel alignment - balancing - tire replacement - oil change - AC maintenance ...etc' },
+    ACCESSORIES: { img: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80', descAr: 'مساحات الزجاج - معطرات ...الخ', descEn: 'Windshield wipers - air fresheners ...etc' },
     OTHER: { img: '/cat-other.png', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
   };
   return m[val] || m['OTHER'];
@@ -423,6 +426,7 @@ export default function App() {
     if (catVal === 'OILS') return isOils();
     if (catVal === 'TIRES') return isTiresOnly();
     if (catVal === 'BATTERIES') return isBatteries();
+    if (catVal === 'ACCESSORIES') return isAccessories();
 
     if (catVal === 'OTHER') {
       return !isSpareParts() && !isOils() && !isTiresOnly() && !isBatteries() && !isAccessories();
@@ -562,11 +566,11 @@ export default function App() {
           </div>
         </div>
 
-        {viewMode === 'categories' && (
-          <div className="header-center-title">
+        <div className="header-center-title">
+          {viewMode === 'categories' && (
             <h2>{lang === 'ar' ? 'تصفح أقسام الكاتالوج' : 'Browse Catalog Categories'}</h2>
-          </div>
-        )}
+          )}
+        </div>
         
 
         <div className="navbar-actions">
@@ -626,13 +630,17 @@ export default function App() {
                 const details = getCategoryDetails(cat.val, lang);
                 return (
                   <div key={cat.val} 
-                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}${cat.val === 'OTHER' ? ' category-other-card' : ''}`}
+                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
                     style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                     <div className="category-large-card-overlay" />
                     <div className="category-large-card-content">
-                      <h3>{cat.label}</h3>
-                      <span className="cat-card-count">{catCount} {lang === 'ar' ? 'عنصر' : 'items'}</span>
+                      <h3>
+                        {cat.label} 
+                        <span className="cat-card-count" style={{ display: 'inline-block', marginInlineStart: '8px' }}>
+                          ({catCount})
+                        </span>
+                      </h3>
                       <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>
                     </div>
                   </div>
