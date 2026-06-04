@@ -200,6 +200,7 @@ export default function App() {
   const [activeList, setActiveList] = useState<'wishlist' | 'cart' | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [pullOffset, setPullOffset] = useState(0);
 
   const cartItems = useMemo(() => {
     return items.filter(item => (cart[item.id] || 0) > 0);
@@ -238,32 +239,59 @@ export default function App() {
     };
   }, [activeList, filterOpen, zoomedImage]);
 
-  // Pull-to-refresh (PWA) — only when no overlay open & at top
+  // Pull-to-refresh custom swipe logic
   useEffect(() => {
     let startY = 0;
-    let pulling = false;
+    let isPulling = false;
+
     const onTouchStart = (e: TouchEvent) => {
-      const top = document.scrollingElement?.scrollTop ?? window.scrollY;
-      if (top === 0 && !document.body.classList.contains('overlay-open')) {
+      const isAtTop = window.scrollY === 0 && document.documentElement.scrollTop === 0 && document.body.scrollTop === 0;
+      const noOverlay = !activeList && !filterOpen && !zoomedImage && !selectedItem;
+      if (isAtTop && noOverlay) {
         startY = e.touches[0].clientY;
-        pulling = true;
+        isPulling = true;
       } else {
-        pulling = false;
+        isPulling = false;
       }
     };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isPulling) return;
+      const currentY = e.touches[0].clientY;
+      const diffY = currentY - startY;
+
+      if (diffY > 0) {
+        const resisted = Math.pow(diffY, 0.82);
+        setPullOffset(resisted);
+      } else {
+        isPulling = false;
+        setPullOffset(0);
+      }
+    };
+
     const onTouchEnd = (e: TouchEvent) => {
-      if (!pulling) return;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (dy > 90) window.location.reload();
-      pulling = false;
+      if (!isPulling) return;
+      isPulling = false;
+      const endY = e.changedTouches[0].clientY;
+      const diffY = endY - startY;
+      const resisted = Math.pow(Math.max(0, diffY), 0.82);
+      if (resisted > 95) {
+        window.location.reload();
+      } else {
+        setPullOffset(0);
+      }
     };
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+
     return () => {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
     };
-  }, []);
+  }, [activeList, filterOpen, zoomedImage, selectedItem]);
 
   useEffect(() => {
     supabase
@@ -297,22 +325,58 @@ export default function App() {
     });
   }, []);
 
-  // Category match: direct equality first, then partial fallback
-  const matchesCategory = (itemCat: string, catVal: string): boolean => {
+  // Category match: checks DB category column, falls back to name keywords
+  const matchesCategory = (item: InventoryItem, catVal: string): boolean => {
     if (catVal === 'ALL') return true;
-    const raw = (itemCat || '').trim();
-    const c = raw.toUpperCase();
-    // Direct match (DB stores SPARE_PARTS, OILS, TIRES, ACCESSORIES, OTHER)
-    if (c === catVal) return true;
-    // Partial fallback
-    if (catVal === 'OILS') return c.includes('OIL') || c.includes('زيت') || c.includes('سائل');
-    if (catVal === 'TIRES') return c.includes('TIRE') || c.includes('إطار') || c.includes('بطارية') || c.includes('BATTERY');
-    if (catVal === 'ACCESSORIES') return c.includes('ACCESSORY') || c.includes('ACCESSORIES') || c.includes('إكسسوار');
-    if (catVal === 'SPARE_PARTS') return c.includes('SPARE') || c.includes('PART') || c.includes('قطعة') || c.includes('فلتر') || c.includes('FILTER');
+    const cat = (item.category || '').trim();
+    const name = (item.name || '').trim();
+
+    const match = (val: string, kws: string[]): boolean => {
+      const lower = val.toLowerCase();
+      return kws.some(kw => lower.includes(kw.toLowerCase()));
+    };
+
+    const isSpareParts = () => {
+      if (match(cat, ['قطع غيار', 'spare_parts', 'spare parts', 'spare-parts', 'parts', 'part'])) return true;
+      if (!cat) {
+        return match(name, ['قطع', 'فلتر', 'filter', 'بواجي', 'تيل', 'فحمات', 'دوزان', 'سير', 'قشاط', 'مساعد', 'مساعدات', 'صدمات', 'مساعدين', 'كولي', 'كوليه', 'طرمبة', 'مضخة']);
+      }
+      return false;
+    };
+
+    const isOils = () => {
+      if (match(cat, ['زيوت وسوائل', 'زيوت', 'سائل', 'زيت', 'oil', 'fluids', 'fluid', 'lubricant'])) return true;
+      if (!cat) {
+        return match(name, ['زيت', 'سائل', 'oil', 'fluid', 'شحم', 'grease', 'مانع تجمد']);
+      }
+      return false;
+    };
+
+    const isAccessories = () => {
+      if (match(cat, ['اكسسوارات', 'إكسسوارات', 'اكسسوار', 'إكسسوار', 'accessory', 'accessories'])) return true;
+      if (!cat) {
+        return match(name, ['اكسسوار', 'إكسسوار', 'مساحات', 'مساحة', 'شاحن', 'حامل', 'عطر', 'معطر', 'فرش', 'غطاء', 'لد', 'اضاءة', 'إنارة', 'ميدالية']);
+      }
+      return false;
+    };
+
+    const isTires = () => {
+      if (match(cat, ['إطارات وبطاريات', 'إطارات', 'بطاريات', 'بطارية', 'إطار', 'tire', 'tires', 'battery', 'batteries'])) return true;
+      if (!cat) {
+        return match(name, ['إطار', 'اطار', 'بطارية', 'بطاريه', 'دولاب', 'عجل', 'تير', 'tire', 'wheel', 'battery']);
+      }
+      return false;
+    };
+
+    if (catVal === 'SPARE_PARTS') return isSpareParts();
+    if (catVal === 'OILS') return isOils();
+    if (catVal === 'ACCESSORIES') return isAccessories();
+    if (catVal === 'TIRES') return isTires();
+    
     if (catVal === 'OTHER') {
-      return !matchesCategory(itemCat, 'OILS') && !matchesCategory(itemCat, 'TIRES') &&
-             !matchesCategory(itemCat, 'ACCESSORIES') && !matchesCategory(itemCat, 'SPARE_PARTS');
+      return !isSpareParts() && !isOils() && !isAccessories() && !isTires();
     }
+    
     return false;
   };
 
@@ -321,13 +385,28 @@ export default function App() {
       const matchSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.barcode.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = matchesCategory(item.category || '', selectedCategory);
+      const matchCategory = matchesCategory(item, selectedCategory);
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
 
   return (
     <div className="app-container" style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+      {/* Pull to refresh visual indicator */}
+      {pullOffset > 10 && (
+        <div 
+          className="pull-to-refresh-indicator" 
+          style={{ 
+            transform: `translateY(${Math.min(pullOffset - 40, 50)}px) translateX(-50%)`,
+            opacity: Math.min(pullOffset / 75, 1)
+          }}
+        >
+          <div className={`ptr-icon-arrow ${pullOffset > 90 ? 'rotate' : ''}`}>
+            ↓
+          </div>
+        </div>
+      )}
+
       {/* Overlay backdrop for filter */}
       {filterOpen && <div className="filter-backdrop" onClick={() => setFilterOpen(false)} />}
       
@@ -416,22 +495,7 @@ export default function App() {
             <div className="header-filter-dropdown-content">
               {CATEGORIES[lang].map((cat) => {
                 // Filter items for this category
-                const catItems = items.filter(item => {
-                  const itemCat = (item.category || '').toUpperCase();
-                  if (cat.val === 'ALL') return true;
-                  if (cat.val === 'OILS') return itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
-                  if (cat.val === 'TIRES') return itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
-                  if (cat.val === 'ACCESSORIES') return itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
-                  if (cat.val === 'SPARE_PARTS') return itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
-                  if (cat.val === 'OTHER') {
-                    const isOil = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
-                    const isTire = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
-                    const isAccessory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
-                    const isPart = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
-                    return !isOil && !isTire && !isAccessory && !isPart;
-                  }
-                  return false;
-                });
+                const catItems = items.filter(item => matchesCategory(item, cat.val));
 
                 const bgImg = getCategoryBgImage(cat.val);
 
@@ -642,13 +706,18 @@ export default function App() {
                           <div className="drawer-item-info">
                             <h4>{item.name}</h4>
                             <p>{item.model || '—'}</p>
-                            <span className="drawer-item-price">${item.selling_price_usd} × {qty} = ${(item.selling_price_usd * qty).toLocaleString('en-US',{minimumFractionDigits:2})}</span>
+                            <span className="drawer-item-price">
+                              ${item.selling_price_usd} × {qty} = ${(item.selling_price_usd * qty).toLocaleString('en-US',{minimumFractionDigits:2})}
+                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--brand-yellow)', marginTop: '2px' }}>
+                                ≈ {((priceSyp * qty)).toLocaleString()} {t.currencySYP}
+                              </span>
+                            </span>
                           </div>
                           <div className="drawer-item-actions">
-                            <div className="qty-stepper">
-                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, -1)}>-</button>
+                            <div className="qty-stepper" style={{ direction: 'ltr' }}>
+                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, -1)}>▼</button>
                               <span className="qty-val">{qty}</span>
-                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, 1)}>+</button>
+                              <button className="qty-btn" onClick={() => handleChangeQty(item.id, 1)}>▲</button>
                             </div>
                             <button 
                               className="drawer-remove-btn" 
@@ -797,6 +866,33 @@ export default function App() {
                   <div className="modal-detail-item">
                     <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
                     <span className="detail-value">{selectedItem.category || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Interactive Quantity Control Stepper */}
+                <div className="modal-qty-control-row">
+                  <span className="qty-label">{lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Quantity:'}</span>
+                  <div className="qty-stepper" style={{ direction: 'ltr' }}>
+                    <button 
+                      className="qty-btn" 
+                      onClick={() => handleChangeQty(selectedItem.id, -1)}
+                      disabled={!(cart[selectedItem.id] > 0)}
+                    >
+                      ▼
+                    </button>
+                    <span className="qty-val">{cart[selectedItem.id] || 0}</span>
+                    <button 
+                      className="qty-btn" 
+                      onClick={() => {
+                        if (!(cart[selectedItem.id] > 0)) {
+                          handleToggleCart(selectedItem.id);
+                        } else {
+                          handleChangeQty(selectedItem.id, 1);
+                        }
+                      }}
+                    >
+                      ▲
+                    </button>
                   </div>
                 </div>
                 

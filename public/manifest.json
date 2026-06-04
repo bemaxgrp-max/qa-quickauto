@@ -1,0 +1,16 @@
+{
+  "name": "Quick Auto Catalog",
+  "short_name": "Quick Auto",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1426",
+  "theme_color": "#0d1426",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
