@@ -538,7 +538,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  min-height: 180px;
+  min-height: 360px;
   background-color: #0d1426;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 6px 28px rgba(0,0,0,0.45);
@@ -1107,7 +1107,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     gap: 0.75rem;
   }
   .category-large-card {
-    min-height: 160px;
+    min-height: 300px;
   }
 }
 
@@ -1117,7 +1117,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     gap: 0.5rem;
   }
   .category-large-card {
-    min-height: 130px;
+    min-height: 260px;
     border-radius: 12px;
   }
   .category-large-card-content {
