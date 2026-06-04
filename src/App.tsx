@@ -27,21 +27,21 @@ interface InventoryItem {
 const CATEGORIES = {
   ar: [
     { val: 'ALL', label: 'الكل' },
-    { val: 'SPARE_PARTS', label: 'قطع غيار' },
-    { val: 'OILS', label: 'زيوت وسوائل' },
-    { val: 'ACCESSORIES', label: 'إكسسوارات' },
-    { val: 'TIRES', label: 'إطارات وبطاريات' },
-    { val: 'SERVICES', label: 'قاعدة الخدمات' },
-    { val: 'OTHER', label: 'تصنيفات أخرى' }
+    { val: 'SPARE_PARTS', label: 'قطع الغيار' },
+    { val: 'OILS', label: 'الزيوت والسوائل' },
+    { val: 'TIRES', label: 'الاطارات' },
+    { val: 'BATTERIES', label: 'البطاريات' },
+    { val: 'SERVICES', label: 'الخدمات' },
+    { val: 'OTHER', label: 'تصنيفات اخرى' }
   ],
   en: [
     { val: 'ALL', label: 'All' },
     { val: 'SPARE_PARTS', label: 'Spare Parts' },
     { val: 'OILS', label: 'Oils & Fluids' },
-    { val: 'ACCESSORIES', label: 'Accessories' },
-    { val: 'TIRES', label: 'Tires & Batteries' },
+    { val: 'TIRES', label: 'Tires' },
+    { val: 'BATTERIES', label: 'Batteries' },
     { val: 'SERVICES', label: 'Services' },
-    { val: 'OTHER', label: 'Other' }
+    { val: 'OTHER', label: 'Other Categories' }
   ]
 };
 
@@ -127,25 +127,35 @@ const getCategoryImageUrl = (category: string | null, name: string) => {
 
 const getCategoryBgImage = (val: string) => {
   switch (val) {
-    case 'ALL':
-      return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
-    case 'OILS':
-      return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
-    case 'TIRES':
-      return 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=400&q=80';
-    case 'ACCESSORIES':
-      return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
-    case 'SPARE_PARTS':
-      return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
-    default:
-      return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
+    case 'ALL': return 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=400&q=80';
+    case 'SPARE_PARTS': return 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80';
+    case 'OILS': return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=400&q=80';
+    case 'TIRES': return 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=400&q=80';
+    case 'BATTERIES': return 'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?auto=format&fit=crop&w=400&q=80';
+    case 'SERVICES': return 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=400&q=80';
+    default: return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=400&q=80';
   }
+};
+
+const getCategoryDetails = (val: string, lang: 'ar' | 'en') => {
+  type D = { img: string; descAr: string; descEn: string };
+  const m: Record<string, D> = {
+    ALL: { img: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=600&q=80', descAr: 'عرض جميع قطع الغيار والخدمات المتاحة لدينا في المركز', descEn: 'View all available spare parts and technical services in our center' },
+    SPARE_PARTS: { img: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=600&q=80', descAr: 'فلاتر، بواجي، مساعدات، طرمبات، دوزان وميكانيك عام', descEn: 'Filters, spark plugs, shocks, pumps, and general mechanical parts' },
+    OILS: { img: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=600&q=80', descAr: 'زيوت محركات أصلية، سوائل فرامل، مانع تجمد وهيدروليك', descEn: 'Original engine oils, brake fluids, coolants, and hydraulics' },
+    TIRES: { img: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=600&q=80', descAr: 'إطارات سيارات يابانية وكورية وعالمية بمختلف المقاسات', descEn: 'Japanese, Korean, and global car tires of all sizes' },
+    BATTERIES: { img: 'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?auto=format&fit=crop&w=600&q=80', descAr: 'بطاريات جافة ومغلقة مع كفالة حقيقية للتشغيل والأداء', descEn: 'Maintenance-free sealed batteries with solid warranty' },
+    SERVICES: { img: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?auto=format&fit=crop&w=600&q=80', descAr: 'غسيل وتلميع، فحص كمبيوتر، برمجة، وصيانة كهربائية وفنية', descEn: 'Washing, computer scan, programming, electrical & tech services' },
+    OTHER: { img: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=600&q=80', descAr: 'إكسسوارات إضافية، إنارة ولدات، ومستلزمات العناية المتنوعة', descEn: 'Additional car accessories, LED lighting, and maintenance gear' },
+  };
+  return m[val] || m['OTHER'];
 };
 
 export default function App() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [viewMode, setViewMode] = useState<'categories' | 'items'>('categories');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [exchangeRate, setExchangeRate] = useState<number>(140.20);
   const [loading, setLoading] = useState(true);
@@ -416,15 +426,26 @@ export default function App() {
       return false;
     };
 
+    const isTiresOnly = () => {
+      if (match(cat, ['إطارات', 'إطار', 'tire', 'tires'])) return true;
+      if (!cat) return match(name, ['إطار', 'اطار', 'دولاب', 'عجل', 'تير', 'tire', 'wheel']) && !match(name, ['battery','بطارية','بطاريه']);
+      return false;
+    };
+    const isBatteries = () => {
+      if (match(cat, ['بطاريات', 'بطارية', 'battery', 'batteries'])) return true;
+      if (!cat) return match(name, ['بطارية', 'بطاريه', 'battery']);
+      return false;
+    };
+
     if (catVal === 'SPARE_PARTS') return isSpareParts();
     if (catVal === 'OILS') return isOils();
-    if (catVal === 'ACCESSORIES') return isAccessories();
-    if (catVal === 'TIRES') return isTires();
-    
+    if (catVal === 'TIRES') return isTiresOnly();
+    if (catVal === 'BATTERIES') return isBatteries();
+
     if (catVal === 'OTHER') {
-      return !isSpareParts() && !isOils() && !isAccessories() && !isTires();
+      return !isSpareParts() && !isOils() && !isTiresOnly() && !isBatteries() && !isAccessories();
     }
-    
+
     return false;
   };
 
@@ -544,7 +565,7 @@ export default function App() {
       {/* Top Header Navigation */}
       <header className="navbar" ref={filterRef}>
         <div className="brand-and-filter">
-          <div className="navbar-brand">
+          <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }}>
             <span className="brand-auto">AUTO</span>
             <span className="brand-space"> </span>
             <span className="brand-quick">QUICK</span>
@@ -564,7 +585,7 @@ export default function App() {
               type="text"
               placeholder={t.searchPlaceholder}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); if (e.target.value.trim()) setViewMode('items'); }}
               className="header-search-input"
             />
           </div>
@@ -637,8 +658,9 @@ export default function App() {
                     style={{ backgroundImage: `url(${bgImg})` }}
                     onClick={() => {
                       setSelectedCategory(cat.val);
+                      setViewMode('items');
                       setFilterOpen(false);
-                      document.querySelector('.catalog-wrapper')?.scrollIntoView({ behavior: 'smooth' });
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                   >
                     <div className="category-card-overlay"></div>
@@ -654,16 +676,45 @@ export default function App() {
         )}
       </header>
 
-      {/* Main Search & Filters Section */}
+      {/* Main Section */}
       <main className="catalog-wrapper">
-        {selectedCategory !== 'ALL' && (
-          <div className="catalog-toolbar">
-            <div className="active-filter-badge">
-              <span>{CATEGORIES[lang].find(c => c.val === selectedCategory)?.label}</span>
-              <button onClick={() => setSelectedCategory('ALL')} className="clear-filter-btn">×</button>
+        {viewMode === 'categories' ? (
+          <div className="categories-landing-container">
+            <div className="landing-categories-header">
+              <h2>{lang === 'ar' ? 'تصفح أقسام الكاتالوج' : 'Browse Catalog Categories'}</h2>
+              <p>{lang === 'ar' ? 'اختر قسماً لعرض المواد والخدمات المتاحة مباشرة' : 'Select a category to view available items instantly'}</p>
+            </div>
+            <div className="categories-grid">
+              {CATEGORIES[lang].map((cat) => {
+                const catCount = items.filter(item => matchesCategory(item, cat.val)).length;
+                const details = getCategoryDetails(cat.val, lang);
+                return (
+                  <div key={cat.val} className="category-large-card"
+                    style={{ backgroundImage: `url(${details.img})` }}
+                    onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                    <div className="category-large-card-overlay" />
+                    <div className="category-large-card-content">
+                      <div className="cat-card-icon">{cat.val === 'ALL' ? '🔧' : cat.val === 'SPARE_PARTS' ? '⚙️' : cat.val === 'OILS' ? '🛢️' : cat.val === 'TIRES' ? '🔄' : cat.val === 'BATTERIES' ? '🔋' : cat.val === 'SERVICES' ? '🔨' : '📦'}</div>
+                      <h3>{cat.label}</h3>
+                      <span className="cat-card-count">{catCount} {lang === 'ar' ? 'عنصر' : 'items'}</span>
+                      <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
+        ) : (
+          <>
+            <div className="items-view-header">
+              <button onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }} className="back-to-cats-btn">
+                {lang === 'ar' ? '← الرجوع للأقسام' : '← Back to Categories'}
+              </button>
+              <div className="items-view-breadcrumb">
+                <span className="breadcrumb-active">{CATEGORIES[lang].find(c => c.val === selectedCategory)?.label || (lang === 'ar' ? 'الكل' : 'All')}</span>
+                {search && <span className="breadcrumb-search"> · "{search}"</span>}
+              </div>
+            </div>
 
         {/* Catalog Grid */}
         {loading ? (
@@ -783,6 +834,8 @@ export default function App() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </main>
 
