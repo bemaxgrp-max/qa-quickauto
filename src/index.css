@@ -600,11 +600,11 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 
 .category-card-wrapper:hover .category-large-card {
-  transform: skewX(-12deg) translateZ(0) scale(1.03);
+  transform: skewX(-12deg) translateZ(0);
   box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 2px var(--brand-yellow);
 }
 .category-card-wrapper:hover .category-card-bg {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .category-large-card-overlay {
