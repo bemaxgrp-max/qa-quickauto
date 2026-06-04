@@ -627,11 +627,7 @@ export default function App() {
                       className="part-card-image"
                       loading="lazy"
                     />
-                    {item.isService ? (
-                      <span className="image-qty-badge service-badge-tag">
-                        {lang === 'ar' ? 'خدمة فنية' : 'Service'}
-                      </span>
-                    ) : (
+                    {!item.isService && (
                       <span className={`image-qty-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
                         {item.quantity}
                       </span>
@@ -1114,9 +1110,6 @@ export default function App() {
                             { tier: 'gold', labelAr: 'العضوية الذهبية', labelEn: 'Gold Member', pct: selectedItem.gold_discount_percent ?? 15, color: 'var(--brand-yellow)' },
                             { tier: 'platinum', labelAr: 'العضوية البلاتينية', labelEn: 'Platinum Member', pct: selectedItem.platinum_discount_percent ?? 20, color: '#e74c3c' }
                           ].map(m => {
-                            const basePrice = selectedItem.selling_price_usd;
-                            const discountAmountUsd = basePrice * (m.pct / 100);
-                            const discountAmountSyp = Math.ceil(discountAmountUsd * exchangeRate / 5) * 5;
                             return (
                               <div key={m.tier} className="matrix-row discount-row">
                                 <div className="matrix-member-label">
@@ -1124,9 +1117,7 @@ export default function App() {
                                   <span>{lang === 'ar' ? m.labelAr : m.labelEn}</span>
                                 </div>
                                 <div className="matrix-member-discount">
-                                  <span className="m-pct">%{m.pct} -</span>
-                                  <span className="m-saved-desc">{lang === 'ar' ? 'توفر' : 'Saves'}</span>
-                                  <span className="m-saved-val">${discountAmountUsd.toFixed(2)} ({discountAmountSyp.toLocaleString()} {t.currencySYP})</span>
+                                  <span className="m-pct">%{m.pct}</span>
                                 </div>
                               </div>
                             );
