@@ -552,12 +552,18 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   gap: 0.75rem;
 }
 
-.category-large-card {
+.category-card-wrapper {
   position: relative;
+  width: 100%;
+  min-height: 360px;
+}
+
+.category-large-card {
+  position: absolute;
+  inset: 0;
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  min-height: 360px;
   background-color: #0d1426;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 6px 28px rgba(0,0,0,0.45);
@@ -565,8 +571,8 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   backface-visibility: hidden;
   /* Skewing the card for a premium dynamic look */
   transform: skewX(-12deg) translateZ(0);
-  /* slight left and right margin to not clip the slanted edges on smaller screens */
-  margin: 0 0.2rem;
+  /* Ensure the absolute positioned card can overflow slightly left/right if needed without breaking grid */
+  margin: 0;
 }
 
 .category-card-bg {
@@ -1136,7 +1142,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     grid-template-columns: repeat(3, 1fr);
     gap: 0.75rem;
   }
-  .category-large-card {
+  .category-card-wrapper {
     min-height: 300px;
   }
 }
@@ -1146,8 +1152,10 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
-  .category-large-card {
+  .category-card-wrapper {
     min-height: 260px;
+  }
+  .category-large-card {
     border-radius: 12px;
   }
   .category-large-card-content {

@@ -629,21 +629,23 @@ export default function App() {
                 const catCount = items.filter(item => matchesCategory(item, cat.val)).length;
                 const details = getCategoryDetails(cat.val, lang);
                 return (
-                  <div key={cat.val} 
-                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
-                    onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                    
-                    <div className="category-card-bg" style={{ backgroundImage: `url(${details.img})` }} />
-                    <div className="category-large-card-overlay" />
-                    
-                    <div className="category-large-card-content">
-                      <h3>
-                        {cat.label} 
-                        <span className="cat-card-count" style={{ display: 'inline-block', marginInlineStart: '8px' }}>
-                          ({catCount})
-                        </span>
-                      </h3>
-                      <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>
+                  <div key={cat.val} className="category-card-wrapper">
+                    <div 
+                      className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
+                      onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                      
+                      <div className="category-card-bg" style={{ backgroundImage: `url(${details.img})` }} />
+                      <div className="category-large-card-overlay" />
+                      
+                      <div className="category-large-card-content">
+                        <h3>
+                          {cat.label} 
+                          <span className="cat-card-count" style={{ display: 'inline-block', marginInlineStart: '8px' }}>
+                            ({catCount})
+                          </span>
+                        </h3>
+                        <p className="cat-card-desc">{lang === 'ar' ? details.descAr : details.descEn}</p>
+                      </div>
                     </div>
                   </div>
                 );
