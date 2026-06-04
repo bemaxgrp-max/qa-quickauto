@@ -16,6 +16,12 @@ interface InventoryItem {
   category: string | null;
   image_url: string | null;
   created_at: string;
+  isService?: boolean;
+  expected_duration_minutes?: number;
+  is_category_affected?: boolean;
+  silver_discount_percent?: number;
+  gold_discount_percent?: number;
+  platinum_discount_percent?: number;
 }
 
 const CATEGORIES = {
@@ -25,6 +31,7 @@ const CATEGORIES = {
     { val: 'OILS', label: 'زيوت وسوائل' },
     { val: 'ACCESSORIES', label: 'إكسسوارات' },
     { val: 'TIRES', label: 'إطارات وبطاريات' },
+    { val: 'SERVICES', label: 'الخدمات الفنية' },
     { val: 'OTHER', label: 'تصنيفات أخرى' }
   ],
   en: [
@@ -33,6 +40,7 @@ const CATEGORIES = {
     { val: 'OILS', label: 'Oils & Fluids' },
     { val: 'ACCESSORIES', label: 'Accessories' },
     { val: 'TIRES', label: 'Tires & Batteries' },
+    { val: 'SERVICES', label: 'Services' },
     { val: 'OTHER', label: 'Other' }
   ]
 };
@@ -312,21 +320,50 @@ export default function App() {
         .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, image_url, created_at')
         .then(({ data, error }) => ({ data, error }));
 
-    fetchItems('public_inventory_view').then(({ data, error }) => {
-      if (error) {
-        fetchItems('inventory_items').then(({ data: d2, error: e2 }) => {
-          if (!e2 && d2) setItems(d2 as InventoryItem[]);
-          setLoading(false);
-        });
-      } else if (data) {
-        setItems(data as InventoryItem[]);
-        setLoading(false);
-      }
+    const fetchServices = () =>
+      supabase
+        .from('services')
+        .select('id, name, price_usd, category, expected_duration_minutes, is_category_affected, silver_discount_percent, gold_discount_percent, platinum_discount_percent, parent_id, is_group, created_at')
+        .eq('is_group', false)
+        .then(({ data, error }) => ({ data, error }));
+
+    Promise.all([
+      fetchItems('public_inventory_view').then(res => {
+        if (res.error) return fetchItems('inventory_items');
+        return res;
+      }),
+      fetchServices()
+    ]).then(([prodRes, svcRes]) => {
+      const prods = (prodRes.data || []) as InventoryItem[];
+      const svcs = (svcRes.data || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        barcode: `SVC-${s.id.slice(0, 8).toUpperCase()}`,
+        brand: null,
+        model: null,
+        quantity: 9999, // Unlimited stock for services
+        selling_price_usd: s.price_usd || 0,
+        category: 'SERVICES',
+        image_url: null,
+        created_at: s.created_at || new Date().toISOString(),
+        isService: true,
+        expected_duration_minutes: s.expected_duration_minutes,
+        is_category_affected: s.is_category_affected !== false,
+        silver_discount_percent: s.silver_discount_percent,
+        gold_discount_percent: s.gold_discount_percent,
+        platinum_discount_percent: s.platinum_discount_percent
+      })) as InventoryItem[];
+
+      setItems([...prods, ...svcs]);
+      setLoading(false);
     });
   }, []);
 
   // Category match: checks DB category column, falls back to name keywords
   const matchesCategory = (item: InventoryItem, catVal: string): boolean => {
+    if (catVal === 'SERVICES') return !!item.isService;
+    if (item.isService) return catVal === 'ALL';
+
     if (catVal === 'ALL') return true;
     const cat = (item.category || '').trim();
     const name = (item.name || '').trim();
@@ -554,9 +591,13 @@ export default function App() {
 
               // Generate WhatsApp Link
               const waText = encodeURIComponent(
-                lang === 'ar'
-                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${item.name} (${item.brand || ''} ${item.model || ''}) بكود OEM: ${item.barcode}`
-                  : `Hello QUICK AUTO, I'd like to ask about/order part: ${item.name} (${item.brand || ''} ${item.model || ''}) with OEM code: ${item.barcode}`
+                item.isService
+                  ? (lang === 'ar'
+                      ? `مرحباً كويك أوتو، أود حجز خدمة: ${item.name} بكود: ${item.barcode}`
+                      : `Hello QUICK AUTO, I'd like to book service: ${item.name} with code: ${item.barcode}`)
+                  : (lang === 'ar'
+                      ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${item.name} (${item.brand || ''} ${item.model || ''}) بكود OEM: ${item.barcode}`
+                      : `Hello QUICK AUTO, I'd like to ask about/order part: ${item.name} (${item.brand || ''} ${item.model || ''}) with OEM code: ${item.barcode}`)
               );
               const waUrl = `https://wa.me/963992162351?text=${waText}`;
 
@@ -575,9 +616,15 @@ export default function App() {
                       className="part-card-image"
                       loading="lazy"
                     />
-                    <span className={`image-qty-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
-                      {item.quantity}
-                    </span>
+                    {item.isService ? (
+                      <span className="image-qty-badge service-badge-tag">
+                        {lang === 'ar' ? 'خدمة فنية' : 'Service'}
+                      </span>
+                    ) : (
+                      <span className={`image-qty-badge ${!inStock ? 'out' : isLowStock ? 'low' : 'in'}`}>
+                        {item.quantity}
+                      </span>
+                    )}
                     <button 
                       className={`image-wishlist-btn ${wishlist.includes(item.id) ? 'active' : ''}`}
                       onClick={(e) => { e.stopPropagation(); handleToggleWishlist(item.id); }}
@@ -590,7 +637,9 @@ export default function App() {
                   {/* S1: Name and Model (replacing Barcode) */}
                   <div className="card-row-1">
                     <h3 className="part-name-new" title={item.name}>{item.name}</h3>
-                    <span className="model-badge-new" title={item.model || ''}>{item.model || '—'}</span>
+                    <span className="model-badge-new" title={item.isService ? (lang === 'ar' ? 'خدمة فنية' : 'Service') : (item.model || '')}>
+                      {item.isService ? (lang === 'ar' ? 'خدمة' : 'Service') : (item.model || '—')}
+                    </span>
                   </div>
 
                   {/* S3: Prices USD & SYP side-by-side */}
@@ -830,48 +879,128 @@ export default function App() {
                   className="modal-image modal-image-zoomable"
                   onClick={(e) => { e.stopPropagation(); setZoomedImage((selectedItem as any).image_url || getCategoryImageUrl(selectedItem.category, selectedItem.name)); }}
                 />
-                <span className="modal-qty-badge">
-                  {lang === 'ar' ? `المتوفر: ${selectedItem.quantity} قطعة` : `Available: ${selectedItem.quantity} pcs`}
-                </span>
+                {selectedItem.isService ? (
+                  <span className="modal-qty-badge service-badge-top">
+                    {lang === 'ar' ? 'حجز فوري متاح' : 'Instant Booking Available'}
+                  </span>
+                ) : (
+                  <span className="modal-qty-badge">
+                    {lang === 'ar' ? `المتوفر: ${selectedItem.quantity} قطعة` : `Available: ${selectedItem.quantity} pcs`}
+                  </span>
+                )}
                 <span className="modal-image-hint">{lang === 'ar' ? '👆 اضغط لتكبير الصورة' : '👆 Tap to zoom'}</span>
               </div>
               
               <div className="modal-info">
                 <h2 className="modal-title">{selectedItem.name}</h2>
                 
-                <div className="modal-details-list">
-                  <div className="modal-detail-item">
-                    <span className="detail-label">{lang === 'ar' ? 'الماركة:' : 'Brand:'}</span>
-                    <span className="detail-value">{selectedItem.brand || '—'}</span>
-                  </div>
-                  <div className="modal-detail-item">
-                    <span className="detail-label">{lang === 'ar' ? 'الموديل المتوافق:' : 'Compatible Model:'}</span>
-                    <span className="detail-value">{selectedItem.model || '—'}</span>
-                  </div>
-                  <div className="modal-detail-item">
-                    <span className="detail-label">{lang === 'ar' ? 'كود القطعة (OEM):' : 'Part Code (OEM):'}</span>
-                    <div className="detail-value oem-copy-wrapper">
-                      <span>{selectedItem.barcode}</span>
-                      <button 
-                        className="modal-copy-btn" 
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedItem.barcode);
-                          alert(lang === 'ar' ? 'تم نسخ الكود!' : 'Code copied!');
-                        }}
-                      >
-                        {lang === 'ar' ? 'نسخ' : 'Copy'}
-                      </button>
+                {selectedItem.isService ? (
+                  /* SERVICES DETAIL VIEW */
+                  <div className="service-details-container">
+                    <div className="service-meta-row">
+                      <div className="meta-badge duration">
+                        <span>{lang === 'ar' ? '⏱️ المدة المتوقعة:' : '⏱️ Expected Duration:'}</span>
+                        <strong>{selectedItem.expected_duration_minutes || 30} {lang === 'ar' ? 'دقيقة' : 'mins'}</strong>
+                      </div>
+                      <div className={`meta-badge category-affect ${selectedItem.is_category_affected ? 'affected' : 'fixed'}`}>
+                        <span>{selectedItem.is_category_affected 
+                          ? (lang === 'ar' ? '⚙️ السعر يتغير حسب فئة السيارة' : '⚙️ Price varies by car class')
+                          : (lang === 'ar' ? '⚙️ سعر ثابت لجميع الفئات' : '⚙️ Fixed price for all classes')}</span>
+                      </div>
+                    </div>
+
+                    {/* Table 1: Price Differences based on Vehicle Category */}
+                    <div className="service-section">
+                      <h4 className="section-title">{lang === 'ar' ? '💰 تكلفة الخدمة حسب فئة السيارة:' : '💰 Service Cost by Vehicle Class:'}</h4>
+                      <div className="price-matrix-grid">
+                        {[
+                          { key: 'economy', labelAr: 'اقتصادية (Economy)', labelEn: 'Economy', factor: 1.0 },
+                          { key: 'mid-range', labelAr: 'متوسطة (Mid-range)', labelEn: 'Mid-range', factor: selectedItem.is_category_affected ? 1.5 : 1.0 },
+                          { key: 'luxury', labelAr: 'فاخرة (Luxury)', labelEn: 'Luxury', factor: selectedItem.is_category_affected ? 2.0 : 1.0 },
+                          { key: 'sport', labelAr: 'رياضية (Sport)', labelEn: 'Sport', factor: selectedItem.is_category_affected ? 2.5 : 1.0 }
+                        ].map(tier => {
+                          const basePrice = selectedItem.selling_price_usd;
+                          const tierUsd = basePrice * tier.factor;
+                          const tierSyp = Math.ceil(tierUsd * exchangeRate / 5) * 5;
+                          return (
+                            <div key={tier.key} className="matrix-row">
+                              <span className="matrix-class-label">{lang === 'ar' ? tier.labelAr : tier.labelEn}</span>
+                              <div className="matrix-class-price">
+                                <span className="m-usd">${tierUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span className="m-divider">|</span>
+                                <span className="m-syp">{tierSyp.toLocaleString()} {t.currencySYP}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Table 2: Membership Discounts */}
+                    <div className="service-section">
+                      <h4 className="section-title">{lang === 'ar' ? '💎 نسبة الخصومات لأصحاب العضوية المعتمدة:' : '💎 Membership Tier Discounts:'}</h4>
+                      <div className="discount-matrix-grid">
+                        {[
+                          { tier: 'silver', labelAr: 'العضوية الفضية (Silver)', labelEn: 'Silver Member', pct: selectedItem.silver_discount_percent ?? 10, color: '#aaa' },
+                          { tier: 'gold', labelAr: 'العضوية الذهبية (Gold)', labelEn: 'Gold Member', pct: selectedItem.gold_discount_percent ?? 15, color: 'var(--brand-yellow)' },
+                          { tier: 'platinum', labelAr: 'العضوية البلاتينية (Platinum)', labelEn: 'Platinum Member', pct: selectedItem.platinum_discount_percent ?? 20, color: '#e74c3c' }
+                        ].map(m => {
+                          const basePrice = selectedItem.selling_price_usd;
+                          const discountAmountUsd = basePrice * (m.pct / 100);
+                          const discountAmountSyp = Math.ceil(discountAmountUsd * exchangeRate / 5) * 5;
+                          return (
+                            <div key={m.tier} className="matrix-row discount-row">
+                              <div className="matrix-member-label">
+                                <span className="member-dot" style={{ backgroundColor: m.color }} />
+                                <span>{lang === 'ar' ? m.labelAr : m.labelEn}</span>
+                              </div>
+                              <div className="matrix-member-discount">
+                                <span className="m-pct">%{m.pct} -</span>
+                                <span className="m-saved-desc">{lang === 'ar' ? 'توفر' : 'Saves'}</span>
+                                <span className="m-saved-val">${discountAmountUsd.toFixed(2)} ({discountAmountSyp.toLocaleString()} {t.currencySYP})</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                  <div className="modal-detail-item">
-                    <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
-                    <span className="detail-value">{selectedItem.category || '—'}</span>
+                ) : (
+                  /* STANDARD PRODUCTS DETAIL VIEW */
+                  <div className="modal-details-list">
+                    <div className="modal-detail-item">
+                      <span className="detail-label">{lang === 'ar' ? 'الماركة:' : 'Brand:'}</span>
+                      <span className="detail-value">{selectedItem.brand || '—'}</span>
+                    </div>
+                    <div className="modal-detail-item">
+                      <span className="detail-label">{lang === 'ar' ? 'الموديل المتوافق:' : 'Compatible Model:'}</span>
+                      <span className="detail-value">{selectedItem.model || '—'}</span>
+                    </div>
+                    <div className="modal-detail-item">
+                      <span className="detail-label">{lang === 'ar' ? 'كود القطعة (OEM):' : 'Part Code (OEM):'}</span>
+                      <div className="detail-value oem-copy-wrapper">
+                        <span>{selectedItem.barcode}</span>
+                        <button 
+                          className="modal-copy-btn" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedItem.barcode);
+                            alert(lang === 'ar' ? 'تم نسخ الكود!' : 'Code copied!');
+                          }}
+                        >
+                          {lang === 'ar' ? 'نسخ' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="modal-detail-item">
+                      <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
+                      <span className="detail-value">{selectedItem.category || '—'}</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Interactive Quantity Control Stepper */}
                 <div className="modal-qty-control-row">
-                  <span className="qty-label">{lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Quantity:'}</span>
+                  <span className="qty-label">{selectedItem.isService ? (lang === 'ar' ? 'العدد المطلوب للخدمة:' : 'Requested Quantity:') : (lang === 'ar' ? 'الكمية المطلوبة:' : 'Requested Quantity:')}</span>
                   <div className="qty-stepper" style={{ direction: 'ltr' }}>
                     <button 
                       className="qty-btn" 
@@ -910,9 +1039,13 @@ export default function App() {
                 <div className="modal-actions-row">
                   <a 
                     href={`https://wa.me/963992162351?text=${encodeURIComponent(
-                      lang === 'ar'
-                        ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) بكود OEM: ${selectedItem.barcode}`
-                        : `Hello QUICK AUTO, I'd like to ask about/order part: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) with OEM code: ${selectedItem.barcode}`
+                      selectedItem.isService
+                        ? (lang === 'ar'
+                            ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب خدمة: ${selectedItem.name} بكود: ${selectedItem.barcode}`
+                            : `Hello QUICK AUTO, I'd like to ask about/book service: ${selectedItem.name} with code: ${selectedItem.barcode}`)
+                        : (lang === 'ar'
+                            ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) بكود OEM: ${selectedItem.barcode}`
+                            : `Hello QUICK AUTO, I'd like to ask about/order part: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) with OEM code: ${selectedItem.barcode}`)
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"

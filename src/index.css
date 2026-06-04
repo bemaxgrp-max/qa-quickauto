@@ -671,6 +671,12 @@ body {
   color: #fff;
 }
 
+.image-qty-badge.service-badge-tag {
+  background: #3498db;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 /* S1: Card Row 1 */
 .card-row-1 {
   display: flex;
@@ -1786,5 +1792,134 @@ body {
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text-secondary);
+}
+
+/* Service Details styling in Modal */
+.service-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 1rem 0;
+  text-align: right;
+}
+[style*="direction: ltr"] .service-details-container {
+  text-align: left;
+}
+
+.service-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.meta-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.meta-badge.category-affect.affected {
+  border-color: rgba(255, 200, 61, 0.25);
+  background: rgba(255, 200, 61, 0.03);
+}
+.meta-badge.category-affect.fixed {
+  border-color: rgba(46, 204, 113, 0.25);
+  background: rgba(46, 204, 113, 0.03);
+}
+
+.service-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--brand-yellow);
+  margin: 0;
+}
+.price-matrix-grid, .discount-matrix-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+.matrix-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+.matrix-row:last-child {
+  border-bottom: none;
+}
+.matrix-class-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.matrix-class-price {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.m-usd {
+  color: var(--brand-yellow);
+  font-weight: 800;
+}
+.m-divider {
+  opacity: 0.3;
+}
+.m-syp {
+  color: var(--text-secondary);
+}
+
+.matrix-member-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+.member-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.matrix-member-discount {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.m-pct {
+  color: var(--color-success);
+  font-weight: 900;
+}
+.m-saved-desc {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+.m-saved-val {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.service-badge-detail {
+  background: var(--brand-yellow) !important;
+  color: var(--bg-dark) !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 12px rgba(255, 200, 61, 0.4);
+}
+.service-badge-top {
+  background: rgba(46, 204, 113, 0.2) !important;
+  border: 1px solid var(--color-success) !important;
+  color: var(--color-success) !important;
 }
 
