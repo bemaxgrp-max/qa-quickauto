@@ -440,47 +440,16 @@ export default function App() {
 
   const actionsJSX = selectedItem ? (
     <div className="modal-left-actions">
-      {/* Actions Row */}
-      <div className="modal-actions-row">
-        <a
-          href={`https://wa.me/963992162351?text=${encodeURIComponent(
-            selectedItem.isService
-              ? (lang === 'ar'
-                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب خدمة: ${selectedItem.name} بكود: ${selectedItem.barcode}`
-                  : `Hello QUICK AUTO, I'd like to ask about/book service: ${selectedItem.name} with code: ${selectedItem.barcode}`)
-              : (lang === 'ar'
-                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) بكود OEM: ${selectedItem.barcode}`
-                  : `Hello QUICK AUTO, I'd like to ask about/order part: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) with OEM code: ${selectedItem.barcode}`)
-          )}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="modal-wa-btn"
-          title={t.orderWhatsApp}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          <span className="modal-btn-text">{t.orderWhatsApp}</span>
-        </a>
-
-        <a
-          href="tel:+963992162351"
-          className="modal-call-btn"
-          title={lang === 'ar' ? 'اتصال مباشر' : 'Call Direct'}
-        >
-          <Phone size={18} />
-          <span className="modal-btn-text">{lang === 'ar' ? 'اتصال' : 'Call'}</span>
-        </a>
-        
+      {/* Row 1: Cart button (Full-width, shrinks to fit stepper if selected) */}
+      <div className="modal-cart-row">
         {!selectedItem.isService ? (
-          <div className="modal-cart-control-group">
+          <>
             <button 
-              className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart compact' : ''}`}
+              className={`modal-cart-btn-full ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
               onClick={() => handleToggleCart(selectedItem.id)}
               title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
             >
-              <ShoppingCart size={18} />
-              <span className="modal-btn-text">
-                {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'في السلة' : 'In Cart') : (lang === 'ar' ? 'السلة' : 'Cart')}
-              </span>
+              <ShoppingCart size={20} />
             </button>
             
             {(cart[selectedItem.id]||0) > 0 && (
@@ -500,29 +469,53 @@ export default function App() {
                 </button>
               </div>
             )}
-          </div>
+          </>
         ) : (
           <button 
-            className={`modal-cart-btn ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
+            className={`modal-cart-btn-full ${(cart[selectedItem.id]||0)>0 ? 'in-cart' : ''}`}
             onClick={() => handleToggleCart(selectedItem.id)}
             title={(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart') : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
+            style={{ width: '100%' }}
           >
-            <ShoppingCart size={18} />
-            <span className="modal-btn-text">
-              {(cart[selectedItem.id]||0)>0 ? (lang === 'ar' ? 'في السلة' : 'In Cart') : (lang === 'ar' ? 'السلة' : 'Cart')}
-            </span>
+            <ShoppingCart size={20} />
           </button>
         )}
+      </div>
+
+      {/* Row 2: WhatsApp, Call, Wishlist as icon-only buttons below Cart */}
+      <div className="modal-secondary-actions-row">
+        <a
+          href={`https://wa.me/963992162351?text=${encodeURIComponent(
+            selectedItem.isService
+              ? (lang === 'ar'
+                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب خدمة: ${selectedItem.name} بكود: ${selectedItem.barcode}`
+                  : `Hello QUICK AUTO, I'd like to ask about/book service: ${selectedItem.name} with code: ${selectedItem.barcode}`)
+              : (lang === 'ar'
+                  ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) بكود OEM: ${selectedItem.barcode}`
+                  : `Hello QUICK AUTO, I'd like to ask about/order part: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) with OEM code: ${selectedItem.barcode}`)
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="modal-icon-only-btn wa-icon-btn"
+          title={t.orderWhatsApp}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+
+        <a
+          href="tel:+963992162351"
+          className="modal-icon-only-btn call-icon-btn"
+          title={lang === 'ar' ? 'اتصال مباشر' : 'Call Direct'}
+        >
+          <Phone size={22} />
+        </a>
 
         <button 
-          className={`modal-wishlist-btn ${wishlist.includes(selectedItem.id) ? 'active' : ''}`}
+          className={`modal-icon-only-btn wishlist-icon-btn ${wishlist.includes(selectedItem.id) ? 'active' : ''}`}
           onClick={() => handleToggleWishlist(selectedItem.id)}
           title={wishlist.includes(selectedItem.id) ? (lang === 'ar' ? 'في المفضلة' : 'In Wishlist') : (lang === 'ar' ? 'إضافة للمفضلة' : 'Add to Wishlist')}
         >
-          <Heart size={18} fill={wishlist.includes(selectedItem.id) ? "currentColor" : "none"} />
-          <span className="modal-btn-text">
-            {wishlist.includes(selectedItem.id) ? (lang === 'ar' ? 'مفضلة' : 'Saved') : (lang === 'ar' ? 'المفضلة' : 'Wishlist')}
-          </span>
+          <Heart size={22} fill={wishlist.includes(selectedItem.id) ? "currentColor" : "none"} />
         </button>
       </div>
     </div>
@@ -1032,18 +1025,7 @@ export default function App() {
                       </div>
                       <div className="modal-detail-item">
                         <span className="detail-label">{lang === 'ar' ? 'كود القطعة (OEM):' : 'Part Code (OEM):'}</span>
-                        <div className="detail-value oem-copy-wrapper">
-                          <span>{selectedItem.barcode}</span>
-                          <button 
-                            className="modal-copy-btn" 
-                            onClick={() => {
-                              navigator.clipboard.writeText(selectedItem.barcode);
-                              alert(lang === 'ar' ? 'تم نسخ الكود!' : 'Code copied!');
-                            }}
-                          >
-                            {lang === 'ar' ? 'نسخ' : 'Copy'}
-                          </button>
-                        </div>
+                        <span className="detail-value">{selectedItem.barcode}</span>
                       </div>
                       <div className="modal-detail-item">
                         <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
@@ -1148,12 +1130,12 @@ export default function App() {
 
                       {((cart[selectedItem.id] || 0) > 0) && (
                         <div className="price-row-item total-price-row" style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed var(--border-color)' }}>
-                          <div className="modal-price-label" style={{ color: 'var(--brand-yellow)' }}>
+                          <div className="modal-price-label">
                             {lang === 'ar' ? `السعر الإجمالي (${cart[selectedItem.id]} قطع):` : `Total Price (${cart[selectedItem.id]} units):`}
                           </div>
                           <div className="modal-prices" style={{ margin: 0, border: 'none', paddingTop: 0 }}>
                             <div className="modal-price-usd">
-                              <span className="price-num" style={{ color: 'var(--brand-yellow)' }}>
+                              <span className="price-num" style={{ color: '#fff' }}>
                                 ${(selectedItem.selling_price_usd * cart[selectedItem.id]).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </span>
                             </div>
