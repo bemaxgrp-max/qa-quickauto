@@ -533,6 +533,11 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   gap: 1.25rem;
 }
 
+.category-other-card {
+  grid-column: 1 / -1;
+  min-height: 140px !important;
+}
+
 .category-large-card {
   position: relative;
   border-radius: 20px;

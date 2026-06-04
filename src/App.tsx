@@ -626,7 +626,7 @@ export default function App() {
                 const details = getCategoryDetails(cat.val, lang);
                 return (
                   <div key={cat.val} 
-                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
+                    className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}${cat.val === 'OTHER' ? ' category-other-card' : ''}`}
                     style={{ backgroundImage: `url(${details.img})` }}
                     onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                     <div className="category-large-card-overlay" />
