@@ -621,7 +621,7 @@ export default function App() {
       </header>
 
       {/* Main Section */}
-      <main className="catalog-wrapper">
+      <main className={`catalog-wrapper ${viewMode === 'categories' ? 'catalog-categories-mode' : ''}`}>
         {viewMode === 'categories' ? (
           <div className="categories-landing-container">
             <div className="categories-grid">
@@ -786,7 +786,7 @@ export default function App() {
       </main>
 
       {/* Sticky Bottom Contact Panel */}
-      <footer className="footer">
+      <footer className={`footer ${viewMode === 'categories' ? 'footer-categories-mode' : ''}`}>
         <div className="footer-content-row">
           <div className="info-item">
             <MapPin size={14} className="footer-icon" />

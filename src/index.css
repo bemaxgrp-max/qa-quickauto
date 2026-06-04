@@ -494,14 +494,14 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   padding: 1.5rem 1.5rem 5rem 1.5rem;
 }
 
-.catalog-wrapper:has(.categories-landing-container) {
+.catalog-wrapper.catalog-categories-mode {
   padding-top: 3rem;
   padding-bottom: 2rem;
   flex: 0 1 auto; /* Stop expanding to push footer down */
 }
 
 /* Also override footer margin if on categories page */
-.catalog-wrapper:has(.categories-landing-container) + .footer {
+.footer.footer-categories-mode {
   margin-top: 2rem;
 }
 
@@ -1077,7 +1077,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 }
 /* If catalog-wrapper is not flex:1, margin-top: auto would push footer to bottom. 
    We want the footer immediately after the cards on the categories page. */
-.catalog-wrapper:has(.categories-landing-container) ~ .footer {
+.footer.footer-categories-mode {
   margin-top: 0 !important;
 }
 
