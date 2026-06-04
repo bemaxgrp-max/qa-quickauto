@@ -171,6 +171,17 @@ export default function App() {
     );
   };
 
+  const [activeList, setActiveList] = useState<'wishlist' | 'cart' | null>(null);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+
+  const cartItems = useMemo(() => {
+    return items.filter(item => cart.includes(item.id));
+  }, [items, cart]);
+
+  const wishlistItems = useMemo(() => {
+    return items.filter(item => wishlist.includes(item.id));
+  }, [items, wishlist]);
+
   const t = TRANSLATIONS[lang];
 
   useEffect(() => {
@@ -288,13 +299,21 @@ export default function App() {
           </div>
 
           {/* Cart Button */}
-          <button className="icon-nav-btn" title={lang === 'ar' ? 'السلة' : 'Cart'}>
+          <button 
+            className={`icon-nav-btn ${activeList === 'cart' ? 'active' : ''}`} 
+            onClick={() => setActiveList(activeList === 'cart' ? null : 'cart')}
+            title={lang === 'ar' ? 'السلة' : 'Cart'}
+          >
             <ShoppingCart size={18} />
             {cart.length > 0 && <span className="nav-btn-badge">{cart.length}</span>}
           </button>
 
           {/* Wishlist Button */}
-          <button className="icon-nav-btn" title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}>
+          <button 
+            className={`icon-nav-btn ${activeList === 'wishlist' ? 'active' : ''}`} 
+            onClick={() => setActiveList(activeList === 'wishlist' ? null : 'wishlist')}
+            title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
+          >
             <Heart size={18} />
             {wishlist.length > 0 && <span className="nav-btn-badge">{wishlist.length}</span>}
           </button>
@@ -413,7 +432,12 @@ export default function App() {
               const waUrl = `https://wa.me/963992162351?text=${waText}`;
 
               return (
-                <div key={item.id} className="part-card">
+                <div 
+                  key={item.id} 
+                  className="part-card"
+                  onClick={() => setSelectedItem(item)}
+                  style={{ cursor: 'pointer' }}
+                >
                   {/* Item Image at the top with quantity badge & wishlist heart button */}
                   <div className="part-card-image-wrapper">
                     <img 
@@ -427,10 +451,10 @@ export default function App() {
                     </span>
                     <button 
                       className={`image-wishlist-btn ${wishlist.includes(item.id) ? 'active' : ''}`}
-                      onClick={() => handleToggleWishlist(item.id)}
+                      onClick={(e) => { e.stopPropagation(); handleToggleWishlist(item.id); }}
                       title={wishlist.includes(item.id) ? (lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from wishlist') : (lang === 'ar' ? 'إضافة إلى المفضلة' : 'Add to wishlist')}
                     >
-                      <Heart size={14} fill={wishlist.includes(item.id) ? "currentColor" : "none"} />
+                      <Heart size={16} fill={wishlist.includes(item.id) ? "currentColor" : "none"} />
                     </button>
                   </div>
 
@@ -455,28 +479,30 @@ export default function App() {
 
                   {/* S4: WhatsApp order button, Cart icon button, and direct call button */}
                   <div className="card-row-4">
+                    <button 
+                      className={`card-cart-btn ${cart.includes(item.id) ? 'in-cart' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); handleToggleCart(item.id); }}
+                      title={cart.includes(item.id) ? (lang === 'ar' ? 'إزالة من السلة' : 'Remove from cart') : (lang === 'ar' ? 'إضافة إلى السلة' : 'Add to cart')}
+                    >
+                      <ShoppingCart size={14} />
+                    </button>
+
                     <a 
                       href={waUrl} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="wa-order-btn-new"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <MessageSquare size={14} />
                       <span>{t.orderWhatsApp}</span>
                     </a>
                     
-                    <button 
-                      className={`card-cart-btn ${cart.includes(item.id) ? 'in-cart' : ''}`}
-                      onClick={() => handleToggleCart(item.id)}
-                      title={cart.includes(item.id) ? (lang === 'ar' ? 'إزالة من السلة' : 'Remove from cart') : (lang === 'ar' ? 'إضافة إلى السلة' : 'Add to cart')}
-                    >
-                      <ShoppingCart size={14} />
-                    </button>
-                    
                     <a 
                       href="tel:+963992162351" 
                       className="call-btn-new"
                       title={lang === 'ar' ? 'اتصال مباشر' : 'Call Direct'}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Phone size={14} />
                     </a>
@@ -511,6 +537,236 @@ export default function App() {
           <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
         </div>
       </footer>
+
+      {/* Side Drawer for Cart / Wishlist */}
+      {activeList && (
+        <div className="drawer-overlay" onClick={() => setActiveList(null)}>
+          <div className="drawer-container" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <h3>
+                {activeList === 'cart' 
+                  ? (lang === 'ar' ? 'سلة المشتريات' : 'Shopping Cart')
+                  : (lang === 'ar' ? 'المفضلة' : 'My Wishlist')}
+              </h3>
+              <button className="drawer-close-btn" onClick={() => setActiveList(null)}>×</button>
+            </div>
+            
+            <div className="drawer-body">
+              {activeList === 'cart' ? (
+                cartItems.length === 0 ? (
+                  <div className="drawer-empty">
+                    <ShoppingCart size={48} className="empty-icon" />
+                    <p>{lang === 'ar' ? 'السلة فارغة حالياً' : 'Your cart is empty'}</p>
+                  </div>
+                ) : (
+                  <div className="drawer-items-list">
+                    {cartItems.map(item => {
+                      const priceSyp = Math.ceil(item.selling_price_usd * exchangeRate / 5) * 5;
+                      return (
+                        <div key={item.id} className="drawer-item">
+                          <img 
+                            src={(item as any).image_url || getCategoryImageUrl(item.category, item.name)} 
+                            alt={item.name} 
+                            className="drawer-item-img"
+                          />
+                          <div className="drawer-item-info">
+                            <h4>{item.name}</h4>
+                            <p>{item.model || '—'}</p>
+                            <span className="drawer-item-price">${item.selling_price_usd} / {priceSyp.toLocaleString()} {t.currencySYP}</span>
+                          </div>
+                          <button 
+                            className="drawer-remove-btn" 
+                            onClick={() => handleToggleCart(item.id)}
+                            title={lang === 'ar' ? 'إزالة' : 'Remove'}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                wishlistItems.length === 0 ? (
+                  <div className="drawer-empty">
+                    <Heart size={48} className="empty-icon" />
+                    <p>{lang === 'ar' ? 'المفضلة فارغة حالياً' : 'Your wishlist is empty'}</p>
+                  </div>
+                ) : (
+                  <div className="drawer-items-list">
+                    {wishlistItems.map(item => {
+                      const priceSyp = Math.ceil(item.selling_price_usd * exchangeRate / 5) * 5;
+                      return (
+                        <div key={item.id} className="drawer-item">
+                          <img 
+                            src={(item as any).image_url || getCategoryImageUrl(item.category, item.name)} 
+                            alt={item.name} 
+                            className="drawer-item-img"
+                          />
+                          <div className="drawer-item-info">
+                            <h4>{item.name}</h4>
+                            <p>{item.model || '—'}</p>
+                            <span className="drawer-item-price">${item.selling_price_usd} / {priceSyp.toLocaleString()} {t.currencySYP}</span>
+                          </div>
+                          <div className="drawer-item-actions">
+                            <button 
+                              className="drawer-item-cart-btn"
+                              onClick={() => {
+                                handleToggleCart(item.id);
+                                handleToggleWishlist(item.id); // move to cart
+                              }}
+                              title={lang === 'ar' ? 'نقل إلى السلة' : 'Move to Cart'}
+                            >
+                              <ShoppingCart size={14} />
+                            </button>
+                            <button 
+                              className="drawer-remove-btn" 
+                              onClick={() => handleToggleWishlist(item.id)}
+                              title={lang === 'ar' ? 'إزالة' : 'Remove'}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+            </div>
+
+            {activeList === 'cart' && cartItems.length > 0 && (
+              <div className="drawer-footer">
+                <div className="drawer-total">
+                  <span>{lang === 'ar' ? 'المجموع:' : 'Total:'}</span>
+                  <span className="total-price">
+                    ${cartItems.reduce((acc, item) => acc + item.selling_price_usd, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <a 
+                  href={`https://wa.me/963992162351?text=${encodeURIComponent(
+                    lang === 'ar'
+                      ? `مرحباً كويك أوتو، أود طلب المواد التالية:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (${item.brand || ''} ${item.model || ''}) OEM: ${item.barcode}`).join('\n')}`
+                      : `Hello QUICK AUTO, I'd like to order the following items:\n${cartItems.map((item, idx) => `${idx + 1}. ${item.name} (${item.brand || ''} ${item.model || ''}) OEM: ${item.barcode}`).join('\n')}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="drawer-checkout-btn"
+                >
+                  <MessageSquare size={16} />
+                  <span>{lang === 'ar' ? 'طلب المواد عبر واتساب' : 'Order Items via WhatsApp'}</span>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {selectedItem && (
+        <div className="modal-overlay" onClick={() => setSelectedItem(null)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setSelectedItem(null)}>×</button>
+            
+            <div className="modal-grid">
+              <div className="modal-image-wrapper">
+                <img 
+                  src={(selectedItem as any).image_url || getCategoryImageUrl(selectedItem.category, selectedItem.name)} 
+                  alt={selectedItem.name} 
+                  className="modal-image"
+                />
+                <span className="modal-qty-badge">
+                  {lang === 'ar' ? `المتوفر: ${selectedItem.quantity} قطعة` : `Available: ${selectedItem.quantity} pcs`}
+                </span>
+              </div>
+              
+              <div className="modal-info">
+                <h2 className="modal-title">{selectedItem.name}</h2>
+                
+                <div className="modal-details-list">
+                  <div className="modal-detail-item">
+                    <span className="detail-label">{lang === 'ar' ? 'الماركة:' : 'Brand:'}</span>
+                    <span className="detail-value">{selectedItem.brand || '—'}</span>
+                  </div>
+                  <div className="modal-detail-item">
+                    <span className="detail-label">{lang === 'ar' ? 'الموديل المتوافق:' : 'Compatible Model:'}</span>
+                    <span className="detail-value">{selectedItem.model || '—'}</span>
+                  </div>
+                  <div className="modal-detail-item">
+                    <span className="detail-label">{lang === 'ar' ? 'كود القطعة (OEM):' : 'Part Code (OEM):'}</span>
+                    <div className="detail-value oem-copy-wrapper">
+                      <span>{selectedItem.barcode}</span>
+                      <button 
+                        className="modal-copy-btn" 
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedItem.barcode);
+                          alert(lang === 'ar' ? 'تم نسخ الكود!' : 'Code copied!');
+                        }}
+                      >
+                        {lang === 'ar' ? 'نسخ' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="modal-detail-item">
+                    <span className="detail-label">{lang === 'ar' ? 'القسم:' : 'Category:'}</span>
+                    <span className="detail-value">{selectedItem.category || '—'}</span>
+                  </div>
+                </div>
+                
+                <div className="modal-prices">
+                  <div className="modal-price-usd">
+                    <span className="price-num">${selectedItem.selling_price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="modal-price-syp">
+                    <span className="price-num">{(Math.ceil(selectedItem.selling_price_usd * exchangeRate / 5) * 5).toLocaleString()}</span>
+                    <span className="price-unit"> {t.currencySYP}</span>
+                  </div>
+                </div>
+                
+                <div className="modal-actions-row">
+                  <a 
+                    href={`https://wa.me/963992162351?text=${encodeURIComponent(
+                      lang === 'ar'
+                        ? `مرحباً كويك أوتو، أود الاستفسار عن/طلب قطعة: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) بكود OEM: ${selectedItem.barcode}`
+                        : `Hello QUICK AUTO, I'd like to ask about/order part: ${selectedItem.name} (${selectedItem.brand || ''} ${selectedItem.model || ''}) with OEM code: ${selectedItem.barcode}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="modal-wa-btn"
+                  >
+                    <MessageSquare size={16} />
+                    <span>{t.orderWhatsApp}</span>
+                  </a>
+                  
+                  <button 
+                    className={`modal-cart-btn ${cart.includes(selectedItem.id) ? 'in-cart' : ''}`}
+                    onClick={() => handleToggleCart(selectedItem.id)}
+                  >
+                    <ShoppingCart size={16} />
+                    <span>
+                      {cart.includes(selectedItem.id)
+                        ? (lang === 'ar' ? 'مضاف للسلة' : 'In Cart')
+                        : (lang === 'ar' ? 'إضافة للسلة' : 'Add to Cart')}
+                    </span>
+                  </button>
+
+                  <button 
+                    className={`modal-wishlist-btn ${wishlist.includes(selectedItem.id) ? 'active' : ''}`}
+                    onClick={() => handleToggleWishlist(selectedItem.id)}
+                  >
+                    <Heart size={16} fill={wishlist.includes(selectedItem.id) ? "currentColor" : "none"} />
+                    <span>
+                      {wishlist.includes(selectedItem.id)
+                        ? (lang === 'ar' ? 'في المفضلة' : 'In Wishlist')
+                        : (lang === 'ar' ? 'إضافة للمفضلة' : 'Add to Wishlist')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
