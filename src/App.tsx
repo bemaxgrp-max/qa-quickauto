@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
@@ -14,6 +14,7 @@ interface InventoryItem {
   quantity: number;
   selling_price_usd: number;
   category: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -129,9 +130,10 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(140.20); // Fallback rate
+  const [exchangeRate, setExchangeRate] = useState<number>(140.20);
   const [loading, setLoading] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLElement>(null);
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
     try {
@@ -184,8 +186,25 @@ export default function App() {
 
   const t = TRANSLATIONS[lang];
 
+  // Close filter on outside click
   useEffect(() => {
-    // 1. Fetch exchange rate from supabase (latest rate_syp from daily_rates)
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    if (filterOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
+
+  // Lock body scroll when overlays open
+  useEffect(() => {
+    const isOpen = !!activeList || filterOpen;
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [activeList, filterOpen]);
+
+  useEffect(() => {
     supabase
       .from('exchange_rates')
       .select('rate')
@@ -198,101 +217,94 @@ export default function App() {
         }
       });
 
-    // 2. Fetch inventory items from the secure public view (or table)
-    supabase
-      .from('public_inventory_view')
-      .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, created_at')
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn('Could not read from public_inventory_view, falling back to table:', error.message);
-          
-          // Fallback to reading directly from inventory_items if permitted
-          supabase
-            .from('inventory_items')
-            .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, created_at')
-            .then(({ data: fallbackData, error: fallbackError }) => {
-              if (fallbackError) {
-                console.error('Error fetching inventory_items fallback:', fallbackError.message);
-              } else if (fallbackData) {
-                setItems(fallbackData as InventoryItem[]);
-              }
-              setLoading(false);
-            });
-        } else if (data) {
-          setItems(data as InventoryItem[]);
+    const fetchItems = (table: string) =>
+      supabase
+        .from(table)
+        .select('id, name, barcode, brand, model, quantity, selling_price_usd, category, image_url, created_at')
+        .then(({ data, error }) => ({ data, error }));
+
+    fetchItems('public_inventory_view').then(({ data, error }) => {
+      if (error) {
+        fetchItems('inventory_items').then(({ data: d2, error: e2 }) => {
+          if (!e2 && d2) setItems(d2 as InventoryItem[]);
           setLoading(false);
-        }
-      });
+        });
+      } else if (data) {
+        setItems(data as InventoryItem[]);
+        setLoading(false);
+      }
+    });
   }, []);
 
-  // Filter items based on search and selectedCategory
+  const matchesCategory = (itemCat: string, catVal: string): boolean => {
+    const c = itemCat.toUpperCase().trim();
+    if (catVal === 'ALL') return true;
+    if (catVal === 'OILS') return c === 'OILS' || c.includes('OIL') || c.includes('زيت') || c.includes('سائل');
+    if (catVal === 'TIRES') return c === 'TIRES' || c.includes('TIRE') || c.includes('إطار') || c.includes('بطارية') || c.includes('BATTERY');
+    if (catVal === 'ACCESSORIES') return c === 'ACCESSORIES' || c.includes('ACCESSORY') || c.includes('إكسسوار');
+    if (catVal === 'SPARE_PARTS') return c === 'SPARE_PARTS' || c.includes('PART') || c.includes('قطعة') || c.includes('فلتر') || c.includes('FILTER');
+    if (catVal === 'OTHER') {
+      return !matchesCategory(itemCat, 'OILS') && !matchesCategory(itemCat, 'TIRES') &&
+             !matchesCategory(itemCat, 'ACCESSORIES') && !matchesCategory(itemCat, 'SPARE_PARTS');
+    }
+    return false;
+  };
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Search matches name or barcode (OEM)
-      const matchSearch = 
+      const matchSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.barcode.toLowerCase().includes(search.toLowerCase());
-
-      // Category matches
-      const itemCat = (item.category || '').toUpperCase();
-      let matchCategory = true;
-      if (selectedCategory !== 'ALL') {
-        if (selectedCategory === 'OILS') {
-          matchCategory = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
-        } else if (selectedCategory === 'TIRES') {
-          matchCategory = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
-        } else if (selectedCategory === 'ACCESSORIES') {
-          matchCategory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
-        } else if (selectedCategory === 'SPARE_PARTS') {
-          matchCategory = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
-        } else if (selectedCategory === 'OTHER') {
-          const isOil = itemCat.includes('OIL') || itemCat.includes('زيت') || itemCat.includes('سائل');
-          const isTire = itemCat.includes('TIRE') || itemCat.includes('إطار') || itemCat.includes('بطارية') || itemCat.includes('BATTERY');
-          const isAccessory = itemCat.includes('ACCESSORY') || itemCat.includes('إكسسوار');
-          const isPart = itemCat.includes('PART') || itemCat.includes('قطعة') || itemCat.includes('فلتر') || itemCat.includes('FILTER');
-          matchCategory = !isOil && !isTire && !isAccessory && !isPart;
-        }
-      }
-
+      const matchCategory = matchesCategory(item.category || '', selectedCategory);
       return matchSearch && matchCategory;
     });
   }, [items, search, selectedCategory]);
 
   return (
     <div className="app-container" style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+      {/* Overlay backdrop for filter */}
+      {filterOpen && <div className="filter-backdrop" onClick={() => setFilterOpen(false)} />}
       
       {/* Top Header Navigation */}
-      <header className="navbar">
+      <header className="navbar" ref={filterRef}>
         <div className="brand-and-filter">
           <div className="navbar-brand">
             <span className="brand-auto">AUTO</span>
             <span className="brand-space"> </span>
             <span className="brand-quick">QUICK</span>
           </div>
-          
-          <button className="filter-toggle-btn-header" onClick={() => setFilterOpen(!filterOpen)}>
+          {/* Filter btn visible on desktop inside brand row */}
+          <button className="filter-toggle-btn-header filter-btn-desktop" onClick={() => setFilterOpen(!filterOpen)}>
             <Grid size={16} />
             <span>{lang === 'ar' ? 'الفلتر' : 'Filter'}</span>
           </button>
         </div>
         
-        {/* Small Search Box in Header */}
-        <div className="header-search-box">
-          <Search className="header-search-icon" size={16} />
-          <input
-            type="text"
-            placeholder={t.searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="header-search-input"
-          />
+        {/* Search box + mobile filter button */}
+        <div className="header-search-row">
+          <div className="header-search-box">
+            <Search className="header-search-icon" size={16} />
+            <input
+              type="text"
+              placeholder={t.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="header-search-input"
+            />
+          </div>
+          {/* Filter btn visible on mobile beside search */}
+          <button className="filter-toggle-btn-header filter-btn-mobile" onClick={() => setFilterOpen(!filterOpen)}>
+            <Grid size={16} />
+          </button>
         </div>
         
+
         <div className="navbar-actions">
           {/* Exchange Rate Badge */}
           <div className="rate-badge">
             <span className="rate-indicator"></span>
-            <span className="rate-label">{t.exchangeRateText}</span>
+            <span className="rate-label rate-label-desktop">{t.exchangeRateText}</span>
+            <span className="rate-label rate-label-mobile">{lang === 'ar' ? 'سعر الصرف المعتمد' : 'Exchange Rate'}</span>
             <span className="rate-value">
               {exchangeRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {t.currencySYP} / $
             </span>
@@ -350,41 +362,20 @@ export default function App() {
                 const bgImg = getCategoryBgImage(cat.val);
 
                 return (
-                  <div key={cat.val} className="category-dropdown-card" style={{ backgroundImage: `url(${bgImg})` }}>
+                  <div
+                    key={cat.val}
+                    className={`category-dropdown-card ${selectedCategory === cat.val ? 'active-cat' : ''}`}
+                    style={{ backgroundImage: `url(${bgImg})` }}
+                    onClick={() => {
+                      setSelectedCategory(cat.val);
+                      setFilterOpen(false);
+                      document.querySelector('.catalog-wrapper')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
                     <div className="category-card-overlay"></div>
                     <div className="category-card-content">
                       <h4>{cat.label}</h4>
-                    </div>
-                    
-                    {/* Hover List */}
-                    <div className="category-items-hover-list">
-                      <div className="hover-list-header">{lang === 'ar' ? 'المواد المتوفرة' : 'Available Items'}</div>
-                      <div className="hover-list-body">
-                        {catItems.length === 0 ? (
-                          <div className="hover-list-empty">{lang === 'ar' ? 'لا يوجد مواد' : 'No items'}</div>
-                        ) : (
-                          catItems.slice(0, 15).map(item => (
-                            <button 
-                              key={item.id} 
-                              className="hover-list-item"
-                              onClick={() => {
-                                setSelectedCategory(cat.val);
-                                setSearch(item.name);
-                                setFilterOpen(false);
-                                document.querySelector('.catalog-wrapper')?.scrollIntoView({ behavior: 'smooth' });
-                              }}
-                            >
-                              <span className="hover-item-name">{item.name}</span>
-                              <span className="hover-item-qty">{item.quantity}</span>
-                            </button>
-                          ))
-                        )}
-                        {catItems.length > 15 && (
-                          <div className="hover-list-empty" style={{ padding: '0.25rem', fontSize: '0.7rem' }}>
-                            {lang === 'ar' ? `+ ${catItems.length - 15} مواد أخرى` : `+ ${catItems.length - 15} more items`}
-                          </div>
-                        )}
-                      </div>
+                      <span className="cat-count-badge">{catItems.length}</span>
                     </div>
                   </div>
                 );
@@ -491,11 +482,11 @@ export default function App() {
                       href={waUrl} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="wa-order-btn-new"
+                      className="wa-order-btn-new wa-icon-only"
                       onClick={(e) => e.stopPropagation()}
+                      title={t.orderWhatsApp}
                     >
-                      <MessageSquare size={14} />
-                      <span>{t.orderWhatsApp}</span>
+                      <MessageSquare size={16} />
                     </a>
                     
                     <a 
