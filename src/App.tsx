@@ -145,6 +145,58 @@ const getCategoryDetails = (val: string, _lang?: 'ar' | 'en') => {
 export default function App() {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [search, setSearch] = useState('');
+
+  // PWA Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const ios = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(ios);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = localStorage.getItem('pwa_install_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // If iOS and not running standalone, show the custom iOS install guide
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isStandalone) {
+      setShowInstallBanner(false);
+    } else if (ios) {
+      const isDismissed = localStorage.getItem('pwa_install_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowInstallBanner(true);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallBanner(false);
+    }
+  };
+
+  const handleDismissInstall = () => {
+    localStorage.setItem('pwa_install_dismissed', 'true');
+    setShowInstallBanner(false);
+  };
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [viewMode, setViewMode] = useState<'categories' | 'items'>('categories');
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -1314,6 +1366,48 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="pwa-install-banner animate-slide-up">
+          <div className="pwa-install-content">
+            <button className="pwa-close-btn" onClick={handleDismissInstall} aria-label="Close">
+              ✕
+            </button>
+            <div className="pwa-app-info">
+              <img src="/favicon.png" alt="Quick Auto" className="pwa-app-logo" />
+              <div className="pwa-app-details">
+                <h4 className="pwa-app-title">
+                  {lang === 'ar' ? 'تطبيق كويك أوتو' : 'Quick Auto App'}
+                </h4>
+                <p className="pwa-app-desc">
+                  {lang === 'ar' 
+                    ? 'ثبت التطبيق على شاشتك لتجربة أسرع وسهلة بدون إنترنت!' 
+                    : 'Install the app on your home screen for a faster offline experience!'}
+                </p>
+              </div>
+            </div>
+            <div className="pwa-action-block">
+              {isIOS ? (
+                <div className="pwa-ios-instructions">
+                  {lang === 'ar' ? (
+                    <span>
+                      اضغط على زر المشاركة <span className="share-icon-placeholder">⎋</span> ثم اختر <strong>"إضافة إلى الشاشة الرئيسية"</strong>
+                    </span>
+                  ) : (
+                    <span>
+                      Tap share <span className="share-icon-placeholder">⎋</span> then select <strong>"Add to Home Screen"</strong>
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <button className="pwa-install-btn" onClick={handleInstallClick}>
+                  {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
+                </button>
+              )}
             </div>
           </div>
         </div>
