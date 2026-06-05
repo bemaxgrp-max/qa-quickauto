@@ -101,7 +101,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1rem;
-  padding: 1rem clamp(1rem, 3vw, 3rem);
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) clamp(1rem, 3vw, 3rem) 1rem;
   background: rgba(4, 6, 13, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1990,7 +1990,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 0.75rem 0.5rem;
-    padding: 0.85rem 1rem;
+    padding: calc(0.85rem + env(safe-area-inset-top, 0px)) 1rem 0.85rem;
   }
   
   .brand-and-search {
