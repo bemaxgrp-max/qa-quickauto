@@ -152,6 +152,7 @@ export default function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Developer FCM Token State
   const logoClickCountRef = useRef(0);
@@ -337,7 +338,7 @@ export default function App() {
     setViewMode('categories');
     setSelectedCategory('ALL');
     setSearch('');
-    window.history.pushState({ type: 'categories' }, '');
+    window.history.replaceState({ type: 'categories' }, '');
   };
 
   const handleLogoClick = () => {
@@ -361,12 +362,20 @@ export default function App() {
     setSelectedCategory(catVal);
     setViewMode('items');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    window.history.pushState({ type: 'category', category: catVal }, '');
+    if (window.history.state?.type && window.history.state.type !== 'categories') {
+      window.history.replaceState({ type: 'category', category: catVal }, '');
+    } else {
+      window.history.pushState({ type: 'category', category: catVal }, '');
+    }
   };
 
   const openDrawer = (listType: 'wishlist' | 'cart') => {
     setActiveList(listType);
-    window.history.pushState({ type: listType }, '');
+    if (window.history.state?.type === 'cart' || window.history.state?.type === 'wishlist') {
+      window.history.replaceState({ type: listType }, '');
+    } else {
+      window.history.pushState({ type: listType }, '');
+    }
   };
 
   const closeDrawer = () => {
@@ -379,7 +388,11 @@ export default function App() {
 
   const openItemDetails = (item: InventoryItem) => {
     setSelectedItem(item);
-    window.history.pushState({ type: 'item-details', itemId: item.id }, '');
+    if (window.history.state?.type === 'item-details') {
+      window.history.replaceState({ type: 'item-details', itemId: item.id }, '');
+    } else {
+      window.history.pushState({ type: 'item-details', itemId: item.id }, '');
+    }
   };
 
   const closeItemDetails = () => {
@@ -404,16 +417,24 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Set initial state on mount
+    // Set initial state on mount with exit guard
     if (!window.history.state) {
-      window.history.replaceState({ type: 'categories' }, '');
+      window.history.replaceState({ type: 'exit-guard' }, '');
+      window.history.pushState({ type: 'categories' }, '');
     }
 
     const handlePopState = (e: PopStateEvent) => {
       const state = e.state;
       if (!state) return;
 
-      if (state.type === 'categories') {
+      if (state.type === 'exit-guard') {
+        setShowExitConfirm(true);
+        window.history.pushState({ type: 'categories' }, '');
+        setViewMode('categories');
+        setSelectedItem(null);
+        setActiveList(null);
+        setZoomedImage(null);
+      } else if (state.type === 'categories') {
         setViewMode('categories');
         setSelectedCategory('ALL');
         setSearch('');
@@ -448,6 +469,51 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [items]);
+
+  const handleExitApp = async () => {
+    try {
+      const { App } = await import('@capacitor/app');
+      await App.exitApp();
+    } catch (err) {
+      window.close();
+    }
+  };
+
+  // Handle native Android hardware/gesture back button
+  useEffect(() => {
+    let backListener: any = null;
+
+    const setupBackListener = async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        backListener = await App.addListener('backButton', () => {
+          if (zoomedImage) {
+            closeZoomedImage();
+          } else if (selectedItem) {
+            closeItemDetails();
+          } else if (activeList) {
+            closeDrawer();
+          } else if (viewMode === 'items') {
+            navigateToCategories();
+          } else if (viewMode === 'categories') {
+            setShowExitConfirm(true);
+          }
+        });
+      } catch (err) {
+        console.log('Capacitor App plugin not initialized in web browser');
+      }
+    };
+
+    if (isNativeApp) {
+      setupBackListener();
+    }
+
+    return () => {
+      if (backListener) {
+        backListener.remove();
+      }
+    };
+  }, [isNativeApp, zoomedImage, selectedItem, activeList, viewMode]);
 
   const cartItems = useMemo(() => {
     return items.filter(item => (cart[item.id] || 0) > 0);
@@ -1559,6 +1625,37 @@ export default function App() {
                 }}
               >
                 Copy Token
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 30000 }} onClick={() => setShowExitConfirm(false)}>
+          <div className="modal-content animate-zoom-in" style={{ maxWidth: '360px', background: '#0d1426', border: '1px solid rgba(255, 200, 61, 0.2)', padding: '1.5rem' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: 'var(--brand-yellow)', marginBottom: '1rem', fontSize: '1.2rem', textAlign: 'center', fontWeight: 'bold' }}>
+              {lang === 'ar' ? 'تأكيد الخروج' : 'Confirm Exit'}
+            </h3>
+            <p style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center', lineHeight: '1.5' }}>
+              {lang === 'ar' 
+                ? 'هل أنت متأكد من رغبتك في الخروج من التطبيق؟' 
+                : 'Are you sure you want to exit the application?'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="modal-cart-btn-full" 
+                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}
+                onClick={() => setShowExitConfirm(false)}
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button 
+                className="modal-cart-btn-full" 
+                style={{ flex: 1, background: 'var(--brand-yellow)', color: '#0d1426', border: 'none', borderRadius: '8px', padding: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={handleExitApp}
+              >
+                {lang === 'ar' ? 'خروج' : 'Exit'}
               </button>
             </div>
           </div>
