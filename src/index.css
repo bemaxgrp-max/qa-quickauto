@@ -140,6 +140,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   display: flex;
   align-items: center;
   user-select: none;
+  direction: ltr !important;
 }
 
 .brand-quick {
@@ -1955,7 +1956,7 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.75rem 0.5rem;
     padding: 0.85rem 1rem;
   }
   
@@ -1964,13 +1965,14 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   }
 
   .navbar-brand {
-    grid-column: 1;
+    grid-column: 1 / span 2;
     grid-row: 1;
-    justify-self: flex-start;
+    justify-self: center;
+    text-align: center;
   }
 
   .header-search-box {
-    grid-column: 1 / span 2;
+    grid-column: 1;
     grid-row: 2;
     width: 100%;
     margin: 0;
@@ -1982,10 +1984,15 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
   .navbar-actions {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     justify-self: flex-end;
     align-self: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .navbar-actions .icon-nav-btn {
+    width: 36px;
+    height: 36px;
   }
 
   /* Rate badge compact */

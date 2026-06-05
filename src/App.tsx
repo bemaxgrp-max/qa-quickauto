@@ -549,9 +549,9 @@ export default function App() {
       <header className="navbar">
         <div className="brand-and-search">
           <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }}>
-            <span className="brand-auto">AUTO</span>
-            <span className="brand-space"> </span>
             <span className="brand-quick">QUICK</span>
+            <span className="brand-space"> </span>
+            <span className="brand-auto">AUTO</span>
           </div>
           
           <div className="header-search-box">
