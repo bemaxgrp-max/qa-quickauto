@@ -413,6 +413,50 @@ export default function App() {
     };
   }, [activeList, filterOpen, zoomedImage, selectedItem]);
 
+  // Custom swipe-to-back gesture handler for mobile overlays
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!selectedItem && !activeList && !zoomedImage) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!selectedItem && !activeList && !zoomedImage) return;
+      
+      const touchCurrentX = e.touches[0].clientX;
+      const touchCurrentY = e.touches[0].clientY;
+      
+      const diffX = touchCurrentX - touchStartX;
+      const diffY = touchCurrentY - touchStartY;
+
+      // Check for horizontal swipe with low threshold
+      if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+        if (zoomedImage) {
+          closeZoomedImage();
+        } else if (activeList) {
+          closeDrawer();
+        } else if (selectedItem) {
+          closeItemDetails();
+        }
+        // Reset coordinate to avoid double trigger
+        touchStartX = touchCurrentX;
+        touchStartY = touchCurrentY;
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [selectedItem, activeList, zoomedImage]);
+
   useEffect(() => {
     supabase
       .from('exchange_rates')
@@ -1065,9 +1109,12 @@ export default function App() {
       {selectedItem && (
         <div className="modal-overlay" onClick={closeItemDetails}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={closeItemDetails} title={lang === 'ar' ? 'رجوع' : 'Back'}>
-              <ArrowLeft size={20} />
-            </button>
+            <div className="modal-header-bar">
+              <button className="modal-close-btn" onClick={closeItemDetails} title={lang === 'ar' ? 'رجوع' : 'Back'}>
+                <ArrowLeft size={20} />
+              </button>
+              <span className="modal-header-title">{selectedItem.name}</span>
+            </div>
             
             <div className="modal-grid">
               {/* Left Column: Image (and Actions if Service) */}
