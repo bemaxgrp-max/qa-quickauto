@@ -4,6 +4,7 @@ import {
   Search, Globe, Phone, MapPin, AlertCircle, 
   Heart, ShoppingCart, ArrowLeft
 } from 'lucide-react';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 interface InventoryItem {
   id: string;
@@ -151,6 +152,50 @@ export default function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
+  // Developer FCM Token State
+  const logoClickCountRef = useRef(0);
+  const [showDevModal, setShowDevModal] = useState(false);
+  const [fcmToken, setFcmToken] = useState('');
+
+  // Push Notifications initialization
+  const initPushNotifications = async () => {
+    try {
+      let permStatus = await PushNotifications.checkPermissions();
+      
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive !== 'granted') {
+        console.log('Push notification permission denied');
+        return;
+      }
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', (token) => {
+        console.log('FCM Token successfully registered:', token.value);
+        localStorage.setItem('fcm_token', token.value);
+      });
+
+      PushNotifications.addListener('registrationError', (error) => {
+        console.error('FCM Registration error:', error);
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('Foreground push notification received:', notification);
+        alert(`${notification.title}\n\n${notification.body}`);
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        console.log('Push notification action performed:', action);
+      });
+
+    } catch (e) {
+      console.error('Error initializing push notifications:', e);
+    }
+  };
+
   useEffect(() => {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const ios = /iphone|ipad|ipod/.test(userAgent);
@@ -165,6 +210,7 @@ export default function App() {
 
     if (isNative) {
       setShowInstallBanner(false);
+      initPushNotifications();
       return;
     }
 
@@ -290,6 +336,23 @@ export default function App() {
     setSelectedCategory('ALL');
     setSearch('');
     window.history.pushState({ type: 'categories' }, '');
+  };
+
+  const handleLogoClick = () => {
+    navigateToCategories();
+    logoClickCountRef.current += 1;
+    if (logoClickCountRef.current >= 5) {
+      const token = localStorage.getItem('fcm_token') || 'No token registered yet';
+      setFcmToken(token);
+      setShowDevModal(true);
+      logoClickCountRef.current = 0;
+    }
+    // Reset tap count after 3 seconds of inactivity
+    if (logoClickCountRef.current === 1) {
+      setTimeout(() => {
+        logoClickCountRef.current = 0;
+      }, 3000);
+    }
   };
 
   const navigateToCategory = (catVal: string) => {
@@ -755,7 +818,7 @@ export default function App() {
 
       <header className="navbar">
         <div className="brand-and-search">
-          <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={navigateToCategories}>
+          <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={handleLogoClick}>
             <span className="brand-quick">QUICK</span>
             <span className="brand-space"> </span>
             <span className="brand-auto">AUTO</span>
@@ -1420,6 +1483,52 @@ export default function App() {
                   {lang === 'ar' ? 'تثبيت التطبيق' : 'Install App'}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Dev options Modal */}
+      {showDevModal && (
+        <div className="modal-overlay" style={{ zIndex: 20000 }} onClick={() => setShowDevModal(false)}>
+          <div className="modal-content animate-zoom-in" style={{ maxWidth: '400px', background: '#0d1426', border: '1px solid rgba(255, 200, 61, 0.2)' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+              <span className="modal-header-title" style={{ fontSize: '1rem', fontWeight: 800 }}>Developer Options</span>
+              <button className="modal-close-btn" style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }} onClick={() => setShowDevModal(false)}>✕</button>
+            </div>
+            <div style={{ padding: '0.5rem', textAlign: 'center' }}>
+              <h3 style={{ color: 'var(--brand-yellow)', marginBottom: '0.5rem', fontSize: '1rem' }}>FCM Device Token</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: '1.4' }}>
+                Use this token in Firebase Console to send a test push notification to this device.
+              </p>
+              <textarea 
+                readOnly 
+                value={fcmToken} 
+                style={{ 
+                  width: '100%', 
+                  height: '110px', 
+                  background: 'rgba(255,255,255,0.03)', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: '8px', 
+                  color: '#fff', 
+                  padding: '0.6rem', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.7rem',
+                  resize: 'none',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  wordBreak: 'break-all'
+                }} 
+              />
+              <button 
+                className="modal-cart-btn-full" 
+                style={{ marginTop: '1.2rem', background: 'var(--brand-yellow)', color: '#0d1426', border: 'none', borderRadius: '8px', padding: '0.75rem', width: '100%', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={() => {
+                  navigator.clipboard.writeText(fcmToken);
+                  alert('Token copied to clipboard!');
+                }}
+              >
+                Copy Token
+              </button>
             </div>
           </div>
         </div>
