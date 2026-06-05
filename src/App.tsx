@@ -151,6 +151,7 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
 
   // Developer FCM Token State
   const logoClickCountRef = useRef(0);
@@ -209,6 +210,7 @@ export default function App() {
                      window.location.protocol === 'iosapp:';
 
     if (isNative) {
+      setIsNativeApp(true);
       setShowInstallBanner(false);
       initPushNotifications();
       return;
@@ -1082,6 +1084,35 @@ export default function App() {
             <Phone size={14} className="footer-icon" />
             <a href="tel:+963992162351" className="footer-link" dir="ltr">+963 992 162 351</a>
           </div>
+          {isNativeApp && (
+            <>
+              <span className="footer-separator">|</span>
+              <div className="info-item">
+                <button 
+                  onClick={() => {
+                    const token = localStorage.getItem('fcm_token') || 'No token registered yet';
+                    setFcmToken(token);
+                    setShowDevModal(true);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand-yellow)',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    padding: '0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: '800',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  🔔 {lang === 'ar' ? 'رمز الإشعارات (FCM)' : 'FCM Token'}
+                </button>
+              </div>
+            </>
+          )}
           <span className="footer-separator">|</span>
           <p className="copyright">© {new Date().getFullYear()} QUICK AUTO. {t.allRightsReserved}</p>
         </div>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "216313659567",
+    "project_id": "quick-auto-customers",
+    "storage_bucket": "quick-auto-customers.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:216313659567:android:30ab619e260394848b145a",
+        "android_client_info": {
+          "package_name": "com.quickauto.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDp6D3up7_aLgcwiQHJwP0lnmr6FbHrBN4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
