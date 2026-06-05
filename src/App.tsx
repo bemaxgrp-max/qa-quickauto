@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
-  Heart, ShoppingCart, ArrowLeft
+  Heart, ShoppingCart, ArrowLeft, Home
 } from 'lucide-react';
 import { PushNotifications } from '@capacitor/push-notifications';
 
@@ -335,10 +335,36 @@ export default function App() {
 
   // Native back navigation helpers
   const navigateToCategories = () => {
+    const state = window.history.state;
+    if (state) {
+      if (state.type === 'category') {
+        window.history.go(-1);
+        return;
+      }
+      if (state.type === 'item-details') {
+        window.history.go(-2);
+        return;
+      }
+      if (state.type === 'cart' || state.type === 'wishlist') {
+        if (selectedCategory && selectedCategory !== 'ALL') {
+          window.history.go(-2);
+        } else {
+          window.history.go(-1);
+        }
+        return;
+      }
+      if (state.type === 'zoomed-image') {
+        window.history.go(-3);
+        return;
+      }
+    }
+    
     setViewMode('categories');
     setSelectedCategory('ALL');
     setSearch('');
-    window.history.replaceState({ type: 'categories' }, '');
+    if (window.history.state?.type !== 'categories') {
+      window.history.replaceState({ type: 'categories' }, '');
+    }
   };
 
   const handleLogoClick = () => {
@@ -1660,6 +1686,17 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Floating Home Button (Only when not in categories) */}
+      {viewMode !== 'categories' && (
+        <button 
+          className="floating-home-btn" 
+          onClick={navigateToCategories}
+          aria-label="Home"
+        >
+          <Home size={28} />
+        </button>
       )}
     </div>
   );
