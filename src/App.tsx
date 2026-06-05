@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
-  Heart, ShoppingCart
+  Heart, ShoppingCart, ArrowLeft
 } from 'lucide-react';
 
 interface InventoryItem {
@@ -219,6 +219,106 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [pullOffset, setPullOffset] = useState(0);
+
+  // Native back navigation helpers
+  const navigateToCategories = () => {
+    setViewMode('categories');
+    setSelectedCategory('ALL');
+    setSearch('');
+    window.history.pushState({ type: 'categories' }, '');
+  };
+
+  const navigateToCategory = (catVal: string) => {
+    setSelectedCategory(catVal);
+    setViewMode('items');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.history.pushState({ type: 'category', category: catVal }, '');
+  };
+
+  const openDrawer = (listType: 'wishlist' | 'cart') => {
+    setActiveList(listType);
+    window.history.pushState({ type: listType }, '');
+  };
+
+  const closeDrawer = () => {
+    if (window.history.state?.type === 'cart' || window.history.state?.type === 'wishlist') {
+      window.history.back();
+    } else {
+      setActiveList(null);
+    }
+  };
+
+  const openItemDetails = (item: InventoryItem) => {
+    setSelectedItem(item);
+    window.history.pushState({ type: 'item-details', itemId: item.id }, '');
+  };
+
+  const closeItemDetails = () => {
+    if (window.history.state?.type === 'item-details') {
+      window.history.back();
+    } else {
+      setSelectedItem(null);
+    }
+  };
+
+  const openZoomedImage = (imgUrl: string) => {
+    setZoomedImage(imgUrl);
+    window.history.pushState({ type: 'zoomed-image', imgUrl }, '');
+  };
+
+  const closeZoomedImage = () => {
+    if (window.history.state?.type === 'zoomed-image') {
+      window.history.back();
+    } else {
+      setZoomedImage(null);
+    }
+  };
+
+  useEffect(() => {
+    // Set initial state on mount
+    if (!window.history.state) {
+      window.history.replaceState({ type: 'categories' }, '');
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      const state = e.state;
+      if (!state) return;
+
+      if (state.type === 'categories') {
+        setViewMode('categories');
+        setSelectedCategory('ALL');
+        setSearch('');
+        setSelectedItem(null);
+        setActiveList(null);
+        setZoomedImage(null);
+      } else if (state.type === 'category') {
+        setViewMode('items');
+        setSelectedCategory(state.category || 'ALL');
+        setSelectedItem(null);
+        setActiveList(null);
+        setZoomedImage(null);
+      } else if (state.type === 'cart' || state.type === 'wishlist') {
+        setActiveList(state.type);
+        setZoomedImage(null);
+        setSelectedItem(null);
+      } else if (state.type === 'item-details') {
+        setActiveList(null);
+        setZoomedImage(null);
+        setViewMode('items');
+        const item = items.find(i => i.id === state.itemId);
+        if (item) {
+          setSelectedItem(item);
+        } else {
+          setSelectedItem(null);
+        }
+      } else if (state.type === 'zoomed-image') {
+        setZoomedImage(state.imgUrl);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [items]);
 
   const cartItems = useMemo(() => {
     return items.filter(item => (cart[item.id] || 0) > 0);
@@ -545,10 +645,9 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Header Navigation */}
       <header className="navbar">
         <div className="brand-and-search">
-          <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }}>
+          <div className="navbar-brand" style={{ cursor: 'pointer' }} onClick={navigateToCategories}>
             <span className="brand-quick">QUICK</span>
             <span className="brand-space"> </span>
             <span className="brand-auto">AUTO</span>
@@ -560,7 +659,13 @@ export default function App() {
               type="text"
               placeholder={t.searchPlaceholder}
               value={search}
-              onChange={(e) => { setSearch(e.target.value); if (e.target.value.trim()) setViewMode('items'); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearch(val);
+                if (val.trim() && viewMode === 'categories') {
+                  navigateToCategory('ALL');
+                }
+              }}
               className="header-search-input"
             />
           </div>
@@ -586,7 +691,7 @@ export default function App() {
           {/* Cart Button */}
           <button 
             className={`icon-nav-btn ${activeList === 'cart' ? 'active' : ''}`} 
-            onClick={() => setActiveList(activeList === 'cart' ? null : 'cart')}
+            onClick={() => activeList === 'cart' ? closeDrawer() : openDrawer('cart')}
             title={lang === 'ar' ? 'السلة' : 'Cart'}
           >
             <ShoppingCart size={18} />
@@ -596,7 +701,7 @@ export default function App() {
           {/* Wishlist Button */}
           <button 
             className={`icon-nav-btn ${activeList === 'wishlist' ? 'active' : ''}`} 
-            onClick={() => setActiveList(activeList === 'wishlist' ? null : 'wishlist')}
+            onClick={() => activeList === 'wishlist' ? closeDrawer() : openDrawer('wishlist')}
             title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
           >
             <Heart size={18} />
@@ -632,7 +737,7 @@ export default function App() {
                   <div key={cat.val} className="category-card-wrapper">
                     <div 
                       className={`category-large-card${['OILS','TIRES','BATTERIES','SERVICES','OTHER'].includes(cat.val) ? ' card-light-bg' : ''}`}
-                      onClick={() => { setSelectedCategory(cat.val); setViewMode('items'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                      onClick={() => navigateToCategory(cat.val)}>
                       
                       <div className="category-card-bg" style={{ backgroundImage: `url(${details.img})` }} />
                       <div className="category-large-card-overlay" />
@@ -655,7 +760,7 @@ export default function App() {
         ) : (
           <>
             <div className="items-view-header">
-              <button onClick={() => { setViewMode('categories'); setSelectedCategory('ALL'); setSearch(''); }} className="back-to-cats-btn">
+              <button onClick={navigateToCategories} className="back-to-cats-btn">
                 {lang === 'ar' ? '← الرجوع للأقسام' : '← Back to Categories'}
               </button>
               <div className="items-view-breadcrumb">
@@ -698,7 +803,7 @@ export default function App() {
                 <div 
                   key={item.id} 
                   className="part-card"
-                  onClick={() => setSelectedItem(item)}
+                  onClick={() => openItemDetails(item)}
                   style={{ cursor: 'pointer' }}
                 >
                   {/* Item Image at the top with quantity badge & wishlist heart button */}
@@ -813,7 +918,7 @@ export default function App() {
 
       {/* Side Drawer for Cart / Wishlist - always on the right */}
       {activeList && (
-        <div className="drawer-overlay" onClick={() => setActiveList(null)}>
+        <div className="drawer-overlay" onClick={closeDrawer}>
           <div className="drawer-container" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <h3>
@@ -821,7 +926,7 @@ export default function App() {
                   ? (lang === 'ar' ? 'سلة المشتريات' : 'Shopping Cart')
                   : (lang === 'ar' ? 'المفضلة' : 'My Wishlist')}
               </h3>
-              <button className="drawer-close-btn" onClick={() => setActiveList(null)}>×</button>
+              <button className="drawer-close-btn" onClick={closeDrawer}>×</button>
             </div>
             
             <div className="drawer-body">
@@ -950,17 +1055,19 @@ export default function App() {
 
       {/* Image Zoom Overlay */}
       {zoomedImage && (
-        <div className="image-zoom-overlay" onClick={() => setZoomedImage(null)}>
+        <div className="image-zoom-overlay" onClick={closeZoomedImage}>
           <img src={zoomedImage} alt="zoom" className="image-zoom-img" />
-          <button className="image-zoom-close" onClick={() => setZoomedImage(null)}>×</button>
+          <button className="image-zoom-close" onClick={closeZoomedImage}>×</button>
         </div>
       )}
 
       {/* Details Modal */}
       {selectedItem && (
-        <div className="modal-overlay" onClick={() => setSelectedItem(null)}>
+        <div className="modal-overlay" onClick={closeItemDetails}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setSelectedItem(null)}>×</button>
+            <button className="modal-close-btn" onClick={closeItemDetails} title={lang === 'ar' ? 'رجوع' : 'Back'}>
+              <ArrowLeft size={20} />
+            </button>
             
             <div className="modal-grid">
               {/* Left Column: Image (and Actions if Service) */}
@@ -970,7 +1077,7 @@ export default function App() {
                     src={(selectedItem as any).image_url || getCategoryImageUrl(selectedItem.category, selectedItem.name)} 
                     alt={selectedItem.name} 
                     className="modal-image modal-image-zoomable"
-                    onClick={(e) => { e.stopPropagation(); setZoomedImage((selectedItem as any).image_url || getCategoryImageUrl(selectedItem.category, selectedItem.name)); }}
+                    onClick={(e) => { e.stopPropagation(); openZoomedImage((selectedItem as any).image_url || getCategoryImageUrl(selectedItem.category, selectedItem.name)); }}
                   />
                   {selectedItem.isService ? (
                     <span className="modal-qty-badge service-badge-top">

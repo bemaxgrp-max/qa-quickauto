@@ -1483,20 +1483,19 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   position: absolute;
   top: 1rem;
   right: 1.25rem;
-  z-index: 10;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.05);
+  z-index: 100;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  line-height: 28px;
+  width: 38px;
+  height: 38px;
+  color: #ff5f5f;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 [style*="direction: rtl"] .modal-close-btn {
@@ -1504,9 +1503,16 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
   left: 1.25rem;
 }
 
+[style*="direction: rtl"] .modal-close-btn svg {
+  transform: scaleX(-1);
+}
+
 .modal-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--brand-yellow);
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+  transform: scale(1.05);
 }
 
 .modal-grid {
@@ -1616,6 +1622,18 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
     overflow-y: auto;
     box-shadow: none;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-close-btn {
+    position: fixed;
+    top: 1rem;
+    right: 1.25rem;
+    z-index: 9999;
+  }
+  
+  [style*="direction: rtl"] .modal-close-btn {
+    right: auto;
+    left: 1.25rem;
   }
 
   .modal-grid {
