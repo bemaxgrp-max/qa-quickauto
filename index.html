@@ -13,28 +13,50 @@
     <title>QUICK AUTO | دليل قطع الغيار والملحقات</title>
     <script>
       (function() {
-        // Unregister service workers and clear caches to force updates on installed mobile apps
-        try {
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              var unregistered = false;
-              for (var i = 0; i < registrations.length; i++) {
-                registrations[i].unregister();
-                unregistered = true;
-              }
-              if (unregistered && window.caches) {
-                caches.keys().then(function(keys) {
-                  keys.forEach(function(key) {
-                    caches.delete(key);
+        // Detect if running inside Capacitor native app wrapper
+        var isNative = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.protocol === 'file:' || 
+                       window.location.protocol === 'capacitor:' ||
+                       window.location.protocol === 'iosapp:';
+
+        if (isNative) {
+          // Unregister service workers and clear caches in native app to force updates
+          try {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                var unregistered = false;
+                for (var i = 0; i < registrations.length; i++) {
+                  registrations[i].unregister();
+                  unregistered = true;
+                }
+                if (unregistered && window.caches) {
+                  caches.keys().then(function(keys) {
+                    keys.forEach(function(key) {
+                      caches.delete(key);
+                    });
                   });
+                  setTimeout(function() {
+                    window.location.reload(true);
+                  }, 300);
+                }
+              });
+            }
+          } catch (swErr) {}
+        } else {
+          // Register service worker in browser for PWA installability
+          try {
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('PWA ServiceWorker registered');
+                }).catch(function(err) {
+                  console.error('PWA ServiceWorker registration failed:', err);
                 });
-                setTimeout(function() {
-                  window.location.reload(true);
-                }, 300);
-              }
-            });
-          }
-        } catch (swErr) {}
+              });
+            }
+          } catch (swErr) {}
+        }
 
         function cleanup() {
           var selectors = [

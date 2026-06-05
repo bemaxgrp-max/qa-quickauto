@@ -156,6 +156,18 @@ export default function App() {
     const ios = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(ios);
 
+    // Detect if running inside Capacitor native app wrapper
+    const isNative = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' ||
+                     window.location.protocol === 'file:' || 
+                     window.location.protocol === 'capacitor:' ||
+                     window.location.protocol === 'iosapp:';
+
+    if (isNative) {
+      setShowInstallBanner(false);
+      return;
+    }
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
