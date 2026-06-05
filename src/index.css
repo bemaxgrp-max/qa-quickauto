@@ -1952,39 +1952,40 @@ body.overlay-open .app-container > *:not(.drawer-overlay):not(.modal-overlay):no
 
   /* Navbar layout for mobile */
   .navbar {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
     gap: 0.75rem;
     padding: 0.85rem 1rem;
   }
   
   .brand-and-search {
-    width: 100%;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
+    display: contents;
+  }
+
+  .navbar-brand {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: flex-start;
   }
 
   .header-search-box {
-    flex: 1;
-    min-width: 200px;
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    width: 100%;
     margin: 0;
   }
 
   .header-center-title {
-    order: -1;
-    width: 100%;
-    text-align: center;
-    margin-bottom: 0.25rem;
-  }
-  
-  .header-center-title h2 {
-    font-size: 1.2rem;
+    display: none !important;
   }
 
   .navbar-actions {
-    align-self: flex-end;
-    gap: 0.4rem;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: flex-end;
+    align-self: center;
+    gap: 0.5rem;
   }
 
   /* Rate badge compact */
