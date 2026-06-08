@@ -261,7 +261,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [viewMode, setViewMode] = useState<'categories' | 'items'>('categories');
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(140.20);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLElement>(null);
@@ -679,6 +679,7 @@ export default function App() {
   }, [selectedItem, activeList, zoomedImage]);
 
   useEffect(() => {
+    // 1. Fetch latest exchange rate on mount
     supabase
       .from('catalog_exchange_rates')
       .select('rate')
@@ -703,6 +704,20 @@ export default function App() {
             });
         }
       });
+
+    // 2. Subscribe to realtime updates on catalog_exchange_rates and exchange_rates tables
+    const channel = supabase.channel('catalog-exchange-rates-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'catalog_exchange_rates' }, (payload) => {
+        if (payload.new && payload.new.rate) {
+          setExchangeRate(payload.new.rate / 100);
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'exchange_rates' }, (payload) => {
+        if (payload.new && payload.new.rate) {
+          setExchangeRate(payload.new.rate / 100);
+        }
+      })
+      .subscribe();
 
     const fetchItems = (table: string) =>
       supabase
@@ -747,6 +762,10 @@ export default function App() {
       setItems([...prods, ...svcs]);
       setLoading(false);
     });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Category match: checks DB category column, falls back to name keywords
