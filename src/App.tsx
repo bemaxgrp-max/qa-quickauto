@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
   Search, Globe, Phone, MapPin, AlertCircle, 
-  Heart, ShoppingCart, ArrowLeft, Home
+  Heart, ShoppingCart, ArrowLeft, Home,
+  LogIn, User, LogOut, Lock, Fingerprint,
+  Eye, EyeOff, ShieldCheck, UserCheck, CreditCard,
+  CheckCircle2, UserPlus, Smartphone, Mail, Key
 } from 'lucide-react';
 import { PushNotifications } from '@capacitor/push-notifications';
 
@@ -257,6 +260,348 @@ export default function App() {
   const handleDismissInstall = () => {
     localStorage.setItem('pwa_install_dismissed', 'true');
     setShowInstallBanner(false);
+  };
+
+  // User Authentication & Lock Screen states
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('catalog_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [authModal, setAuthModal] = useState<'login' | 'signup' | 'profile' | null>(null);
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    try {
+      const savedUser = localStorage.getItem('catalog_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        return !!parsed.pin;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  });
+
+  const [authForm, setAuthForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    pin: ''
+  });
+  
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  
+  const [checkoutModal, setCheckoutModal] = useState(false);
+  const [checkoutPin, setCheckoutPin] = useState('');
+  const [isVerifyingBiometrics, setIsVerifyingBiometrics] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  const resetAuthForm = () => {
+    setAuthForm({
+      name: '',
+      phone: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      pin: ''
+    });
+    setAuthError('');
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    
+    const { name, phone, email, password, confirmPassword, pin } = authForm;
+    
+    if (!name.trim()) {
+      setAuthError(lang === 'ar' ? 'الاسم الكامل مطلوب' : 'Full Name is required');
+      return;
+    }
+    if (!phone.trim()) {
+      setAuthError(lang === 'ar' ? 'رقم الهاتف مطلوب' : 'Phone number is required');
+      return;
+    }
+    if (!password) {
+      setAuthError(lang === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required');
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError(lang === 'ar' ? 'كلمة المرور يجب أن تكون 6 خانات على الأقل' : 'Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setAuthError(lang === 'ar' ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match');
+      return;
+    }
+    if (!pin || pin.length < 4 || pin.length > 6 || isNaN(Number(pin))) {
+      setAuthError(lang === 'ar' ? 'الرمز السري (PIN) يجب أن يكون بين 4 إلى 6 أرقام' : 'PIN code must be 4 to 6 digits');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      const { data: existingUser, error: checkError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      const userAddressData = {
+        password,
+        pin,
+        biometricsEnabled: true
+      };
+
+      if (existingUser) {
+        let parsedAddr: any = {};
+        try {
+          parsedAddr = JSON.parse(existingUser.address || '{}');
+        } catch {}
+        
+        if (parsedAddr.password) {
+          setAuthError(lang === 'ar' ? 'رقم الهاتف هذا مسجل بالفعل. يرجى تسجيل الدخول.' : 'This phone number is already registered. Please log in.');
+          setAuthLoading(false);
+          return;
+        }
+
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update({
+            name: name,
+            email: email || null,
+            address: JSON.stringify(userAddressData)
+          })
+          .eq('id', existingUser.id);
+
+        if (updateError) throw updateError;
+        
+        const loggedUser = {
+          id: existingUser.id,
+          name: name,
+          phone: phone,
+          email: email || null,
+          pin: pin,
+          biometricsEnabled: true
+        };
+        localStorage.setItem('catalog_user', JSON.stringify(loggedUser));
+        setCurrentUser(loggedUser);
+      } else {
+        const { data: newUser, error: insertError } = await supabase
+          .from('customers')
+          .insert([{
+            name: name,
+            phone: phone,
+            email: email || null,
+            address: JSON.stringify(userAddressData),
+            membership_tier: 'normal',
+            loyalty_points: 0
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        const loggedUser = {
+          id: newUser.id,
+          name: name,
+          phone: phone,
+          email: email || null,
+          pin: pin,
+          biometricsEnabled: true
+        };
+        localStorage.setItem('catalog_user', JSON.stringify(loggedUser));
+        setCurrentUser(loggedUser);
+      }
+
+      setAuthModal(null);
+      resetAuthForm();
+      alert(lang === 'ar' ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setAuthError(err.message || 'Error occurred during registration');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    
+    const { phone, password } = authForm;
+    
+    if (!phone.trim()) {
+      setAuthError(lang === 'ar' ? 'رقم الهاتف مطلوب' : 'Phone number is required');
+      return;
+    }
+    if (!password) {
+      setAuthError(lang === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      const { data: user, error: fetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (!user) {
+        setAuthError(lang === 'ar' ? 'رقم الهاتف غير مسجل' : 'Phone number is not registered');
+        setAuthLoading(false);
+        return;
+      }
+
+      let parsedAddr: any = null;
+      try {
+        parsedAddr = JSON.parse(user.address || '{}');
+      } catch {}
+
+      if (!parsedAddr || !parsedAddr.password) {
+        setAuthError(lang === 'ar' ? 'هذا الحساب لم يتم تفعيل الشراء أونلاين له. يرجى إنشاء حساب جديد.' : 'This account has not activated online shopping. Please sign up.');
+        setAuthLoading(false);
+        return;
+      }
+
+      if (parsedAddr.password !== password) {
+        setAuthError(lang === 'ar' ? 'كلمة المرور غير صحيحة' : 'Incorrect password');
+        setAuthLoading(false);
+        return;
+      }
+
+      const loggedUser = {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        pin: parsedAddr.pin,
+        biometricsEnabled: parsedAddr.biometricsEnabled !== false
+      };
+
+      localStorage.setItem('catalog_user', JSON.stringify(loggedUser));
+      setCurrentUser(loggedUser);
+      setAuthModal(null);
+      resetAuthForm();
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setAuthError(err.message || 'Error occurred during login');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('catalog_user');
+    setCurrentUser(null);
+    setAuthModal(null);
+    setIsLocked(false);
+  };
+
+  const handleToggleBiometrics = async () => {
+    if (!currentUser) return;
+    try {
+      const newBiometricsState = !currentUser.biometricsEnabled;
+      const updatedUser = { ...currentUser, biometricsEnabled: newBiometricsState };
+      
+      const { data: dbUser } = await supabase.from('customers').select('*').eq('id', currentUser.id).single();
+      if (dbUser) {
+        let addrObj = {};
+        try { addrObj = JSON.parse(dbUser.address || '{}'); } catch {}
+        const newAddr = { ...addrObj, biometricsEnabled: newBiometricsState };
+        await supabase.from('customers').update({ address: JSON.stringify(newAddr) }).eq('id', currentUser.id);
+      }
+      
+      localStorage.setItem('catalog_user', JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+    } catch (err) {
+      console.error('Error toggling biometrics:', err);
+    }
+  };
+
+  const handleUnlockPin = (num: string) => {
+    if (pinInput.length >= 6) return;
+    const nextInput = pinInput + num;
+    setPinInput(nextInput);
+    setAuthError('');
+
+    if (currentUser && currentUser.pin && nextInput.length === currentUser.pin.length) {
+      if (nextInput === currentUser.pin) {
+        setIsLocked(false);
+        setPinInput('');
+      } else {
+        setAuthError(lang === 'ar' ? 'الرمز السري غير صحيح' : 'Incorrect PIN');
+        setPinInput('');
+      }
+    }
+  };
+
+  const handleUnlockFingerprint = () => {
+    setIsVerifyingBiometrics(true);
+    setAuthError('');
+    setTimeout(() => {
+      setIsVerifyingBiometrics(false);
+      setIsLocked(false);
+      setPinInput('');
+    }, 1500);
+  };
+
+  const handleCheckoutPinChange = (num: string) => {
+    const pinLen = currentUser?.pin?.length || 4;
+    if (checkoutPin.length >= pinLen) return;
+    const nextInput = checkoutPin + num;
+    setCheckoutPin(nextInput);
+    
+    if (currentUser && nextInput.length === pinLen) {
+      if (nextInput === currentUser.pin) {
+        setCheckoutSuccess(true);
+        setCart({});
+        localStorage.removeItem('quickauto_cart');
+      } else {
+        alert(lang === 'ar' ? 'الرمز السري غير صحيح' : 'Incorrect PIN');
+        setCheckoutPin('');
+      }
+    }
+  };
+
+  const handleCheckoutFingerprint = () => {
+    setIsVerifyingBiometrics(true);
+    setTimeout(() => {
+      setIsVerifyingBiometrics(false);
+      setCheckoutSuccess(true);
+      setCart({});
+      localStorage.removeItem('quickauto_cart');
+    }, 1500);
+  };
+
+  const handleStartCheckout = () => {
+    if (!currentUser) {
+      setAuthModal('login');
+      alert(lang === 'ar' ? 'الرجاء تسجيل الدخول أولاً لإتمام الشراء والدفع أونلاين' : 'Please log in first to complete purchase & pay online');
+      return;
+    }
+    setCheckoutModal(true);
+    setCheckoutPin('');
+    setCheckoutSuccess(false);
+    
+    if (currentUser.biometricsEnabled) {
+      handleCheckoutFingerprint();
+    }
   };
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [viewMode, setViewMode] = useState<'categories' | 'items'>('categories');
@@ -994,6 +1339,33 @@ export default function App() {
             </span>
           </div>
 
+          {/* User Auth Profile / Login Button */}
+          {currentUser ? (
+            <button 
+              className="icon-nav-btn user-profile-btn"
+              onClick={() => setAuthModal('profile')}
+              title={lang === 'ar' ? 'الملف الشخصي' : 'Profile'}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', background: 'rgba(255,200,61,0.15)', border: '1px solid rgba(255,200,61,0.3)', color: '#fff', cursor: 'pointer', height: '40px' }}
+            >
+              <User size={18} style={{ color: 'var(--brand-yellow)' }} />
+              <span className="user-name-label" style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fff', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentUser.name.split(' ')[0]}
+              </span>
+            </button>
+          ) : (
+            <button 
+              className="icon-nav-btn login-nav-btn"
+              onClick={() => { resetAuthForm(); setAuthModal('login'); }}
+              title={lang === 'ar' ? 'تسجيل الدخول / تسجيل جديد' : 'Log in / Sign up'}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '12px', background: 'var(--brand-yellow)', color: '#0d1426', fontWeight: 'bold', cursor: 'pointer', border: 'none', height: '40px' }}
+            >
+              <LogIn size={16} />
+              <span className="login-btn-label" style={{ fontSize: '0.8rem' }}>
+                {lang === 'ar' ? 'تسجيل الدخول' : 'Log In'}
+              </span>
+            </button>
+          )}
+
           {/* Cart Button */}
           <button 
             className={`icon-nav-btn ${activeList === 'cart' ? 'active' : ''}`} 
@@ -1362,13 +1734,15 @@ export default function App() {
             </div>
 
             {activeList === 'cart' && cartItems.length > 0 && (
-              <div className="drawer-footer">
+              <div className="drawer-footer" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div className="drawer-total">
                   <span>{lang === 'ar' ? 'المجموع:' : 'Total:'}</span>
                   <span className="total-price">
                     ${cartItems.reduce((acc, item) => acc + item.selling_price_usd * (cart[item.id] || 1), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                
+                {/* WhatsApp Order Option */}
                 <a 
                   href={`https://wa.me/963992162351?text=${encodeURIComponent(
                     lang === 'ar'
@@ -1378,10 +1752,21 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="drawer-checkout-btn"
+                  style={{ background: '#25D366', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                   <span>{lang === 'ar' ? 'طلب المواد عبر واتساب' : 'Order Items via WhatsApp'}</span>
                 </a>
+
+                {/* Online Pay Option */}
+                <button
+                  onClick={handleStartCheckout}
+                  className="drawer-checkout-btn online-pay-btn"
+                  style={{ background: 'var(--brand-yellow)', color: '#0d1426', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', outline: 'none' }}
+                >
+                  <CreditCard size={16} />
+                  <span>{lang === 'ar' ? 'شراء ودفع أونلاين' : 'Buy & Pay Online'}</span>
+                </button>
               </div>
             )}
           </div>
@@ -1697,6 +2082,649 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Auth Modals (Login & Sign Up) */}
+      {authModal && authModal !== 'profile' && (
+        <div className="modal-overlay" style={{ zIndex: 20000 }} onClick={() => setAuthModal(null)}>
+          <div className="modal-content animate-zoom-in" style={{ maxWidth: '450px', background: '#090e1a', border: '1px solid rgba(255, 200, 61, 0.25)', padding: '2rem', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: 'var(--brand-yellow)', fontSize: '1.4rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {authModal === 'login' ? <LogIn size={22} /> : <UserPlus size={22} />}
+                {authModal === 'login' 
+                  ? (lang === 'ar' ? 'تسجيل الدخول للحساب' : 'Account Login') 
+                  : (lang === 'ar' ? 'إنشاء حساب جديد أونلاين' : 'Create New Account')}
+              </h3>
+              <button onClick={() => setAuthModal(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer', outline: 'none' }}>&times;</button>
+            </div>
+
+            {authError && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <form onSubmit={authModal === 'login' ? handleLogin : handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              {authModal === 'signup' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'الاسم الكامل *' : 'Full Name *'}</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                    <input 
+                      type="text" 
+                      required
+                      placeholder={lang === 'ar' ? 'أدخل اسمك الثلاثي' : 'Enter your full name'}
+                      value={authForm.name}
+                      onChange={e => setAuthForm({ ...authForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '12px' : '36px', paddingRight: lang === 'ar' ? '36px' : '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'رقم الهاتف (إجباري) *' : 'Phone Number (Mandatory) *'}</label>
+                <div style={{ position: 'relative' }}>
+                  <Smartphone size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                  <input 
+                    type="tel" 
+                    required
+                    placeholder={lang === 'ar' ? 'مثال: 0992162351' : 'e.g. 0992162351'}
+                    value={authForm.phone}
+                    onChange={e => setAuthForm({ ...authForm, phone: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '12px' : '36px', paddingRight: lang === 'ar' ? '36px' : '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', textAlign: 'left', direction: 'ltr' }}
+                  />
+                </div>
+              </div>
+
+              {authModal === 'signup' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'البريد الإلكتروني (اختياري)' : 'Email Address (Optional)'}</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                    <input 
+                      type="email" 
+                      placeholder="name@example.com"
+                      value={authForm.email}
+                      onChange={e => setAuthForm({ ...authForm, email: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '12px' : '36px', paddingRight: lang === 'ar' ? '36px' : '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', textAlign: 'left', direction: 'ltr' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'كلمة المرور (إجباري) *' : 'Password (Mandatory) *'}</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    required
+                    placeholder="••••••••"
+                    value={authForm.password}
+                    onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '36px' : '36px', paddingRight: lang === 'ar' ? '36px' : '36px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', textAlign: 'left', direction: 'ltr' }}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: lang === 'ar' ? 'auto' : '12px', left: lang === 'ar' ? '12px' : 'auto', background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {authModal === 'signup' && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'تأكيد كلمة المرور *' : 'Confirm Password *'}</label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        required
+                        placeholder="••••••••"
+                        value={authForm.confirmPassword}
+                        onChange={e => setAuthForm({ ...authForm, confirmPassword: e.target.value })}
+                        style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '36px' : '36px', paddingRight: lang === 'ar' ? '36px' : '36px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', textAlign: 'left', direction: 'ltr' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'الرمز السري PIN (للبصمة والقفل السريع) *' : 'Security PIN (For Lock & Biometrics) *'}</label>
+                    <div style={{ position: 'relative' }}>
+                      <Key size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: lang === 'ar' ? 'auto' : '12px', right: lang === 'ar' ? '12px' : 'auto', color: '#666' }} />
+                      <input 
+                        type={showPin ? "text" : "password"} 
+                        required
+                        maxLength={6}
+                        placeholder={lang === 'ar' ? 'أدخل من 4 إلى 6 أرقام' : 'Enter 4 to 6 digits'}
+                        value={authForm.pin}
+                        onChange={e => setAuthForm({ ...authForm, pin: e.target.value.replace(/\D/g, '') })}
+                        style={{ width: '100%', padding: '0.75rem 12px', paddingLeft: lang === 'ar' ? '36px' : '36px', paddingRight: lang === 'ar' ? '36px' : '36px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '0.9rem', outline: 'none', textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold' }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: lang === 'ar' ? 'auto' : '12px', left: lang === 'ar' ? '12px' : 'auto', background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={authLoading}
+                style={{ width: '100%', background: 'var(--brand-yellow)', color: '#0d1426', border: 'none', padding: '0.85rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '0.5rem', opacity: authLoading ? 0.7 : 1 }}
+              >
+                {authLoading ? <div className="spinner" style={{ width: '18px', height: '18px', border: '2px solid #0d1426', borderTopColor: 'transparent' }} /> : null}
+                {authModal === 'login' 
+                  ? (lang === 'ar' ? 'دخول' : 'Log In') 
+                  : (lang === 'ar' ? 'إنشاء حساب جديد' : 'Sign Up')}
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.85rem', color: '#aaa' }}>
+                {authModal === 'login' ? (
+                  <>
+                    {lang === 'ar' ? 'ليس لديك حساب؟ ' : 'Don\'t have an account? '}
+                    <button 
+                      type="button" 
+                      onClick={() => { resetAuthForm(); setAuthModal('signup'); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--brand-yellow)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
+                    >
+                      {lang === 'ar' ? 'سجل الآن' : 'Sign up now'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {lang === 'ar' ? 'لديك حساب بالفعل؟ ' : 'Already have an account? '}
+                    <button 
+                      type="button" 
+                      onClick={() => { resetAuthForm(); setAuthModal('login'); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--brand-yellow)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
+                    >
+                      {lang === 'ar' ? 'سجل دخول' : 'Log in'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Profile / Logout / Biometrics settings modal */}
+      {authModal === 'profile' && currentUser && (
+        <div className="modal-overlay" style={{ zIndex: 20000 }} onClick={() => setAuthModal(null)}>
+          <div className="modal-content animate-zoom-in" style={{ maxWidth: '400px', background: '#090e1a', border: '1px solid rgba(255, 200, 61, 0.25)', padding: '2rem', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: 'var(--brand-yellow)', fontSize: '1.3rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={22} />
+                {lang === 'ar' ? 'حساب المشتري' : 'Buyer Profile'}
+              </h3>
+              <button onClick={() => setAuthModal(null)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer', outline: 'none' }}>&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
+              <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(255,200,61,0.1)', border: '2px solid var(--brand-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-yellow)' }}>
+                <UserCheck size={36} />
+              </div>
+              <h4 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 'bold' }}>{currentUser.name}</h4>
+              <span style={{ color: '#888', fontSize: '0.85rem' }}>{currentUser.phone}</span>
+              {currentUser.email && <span style={{ color: '#666', fontSize: '0.8rem' }}>{currentUser.email}</span>}
+            </div>
+
+            {/* Profile Options */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '2rem' }}>
+              {/* Biometrics Toggle Option */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Fingerprint size={20} style={{ color: 'var(--brand-yellow)' }} />
+                  <div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'الدخول بنظام البصمة' : 'Biometric Access'}</div>
+                    <div style={{ color: '#666', fontSize: '0.75rem' }}>{lang === 'ar' ? 'تفعيل بصمة الأصبع لتأمين الحساب' : 'Use fingerprint sensor to unlock'}</div>
+                  </div>
+                </div>
+                
+                {/* Switch Toggle */}
+                <button 
+                  onClick={handleToggleBiometrics}
+                  style={{
+                    width: '46px',
+                    height: '24px',
+                    borderRadius: '12px',
+                    background: currentUser.biometricsEnabled ? 'var(--brand-yellow)' : '#222',
+                    border: 'none',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background 0.3s'
+                  }}
+                >
+                  <span 
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: currentUser.biometricsEnabled ? '#0d1426' : '#888',
+                      position: 'absolute',
+                      top: '3px',
+                      left: currentUser.biometricsEnabled ? '25px' : '3px',
+                      transition: 'left 0.3s'
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* PIN Code Information Option */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Key size={20} style={{ color: 'var(--brand-yellow)' }} />
+                  <div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold' }}>{lang === 'ar' ? 'الرمز السري للمحفظة' : 'Security PIN'}</div>
+                    <div style={{ color: '#666', fontSize: '0.75rem' }}>{lang === 'ar' ? 'مفعل ومؤمن في هذا الجهاز' : 'Configured and secured'}</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--brand-yellow)', fontWeight: 'bold', letterSpacing: '1px' }}>
+                  {currentUser.pin.replace(/./g, '•')}
+                </span>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleLogout}
+              style={{ width: '100%', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.85rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+            >
+              <LogOut size={16} />
+              {lang === 'ar' ? 'تسجيل الخروج من الحساب' : 'Logout from Account'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lock Screen (PIN Code & Fingerprint unlock dialog) */}
+      {isLocked && currentUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at center, #090e1a 0%, #03050a 100%)',
+          zIndex: 50000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          padding: '2rem',
+          direction: lang === 'ar' ? 'rtl' : 'ltr'
+        }}>
+          {/* Logo and Lock icon */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.8rem', fontWeight: 'bold' }}>
+              <span className="brand-quick" style={{ color: '#fff' }}>QUICK</span>
+              <span className="brand-auto" style={{ color: 'var(--brand-yellow)' }}>AUTO</span>
+            </div>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'rgba(255,200,61,0.05)',
+              border: '1px solid rgba(255,200,61,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--brand-yellow)',
+              marginTop: '10px'
+            }}>
+              <Lock size={24} />
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '6px' }}>
+            {lang === 'ar' ? 'مرحباً بعودتك، ' : 'Welcome back, '}
+            <span style={{ color: 'var(--brand-yellow)' }}>{currentUser.name.split(' ')[0]}</span>
+          </h3>
+          <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+            {lang === 'ar' ? 'الرجاء إدخال الرمز السري أو البصمة لإلغاء القفل' : 'Please enter security PIN or use biometrics to unlock'}
+          </p>
+
+          {/* Dots Indicator for PIN */}
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '2.5rem', direction: 'ltr' }}>
+            {Array.from({ length: currentUser.pin.length }).map((_, i) => (
+              <div 
+                key={i} 
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: i < pinInput.length ? 'var(--brand-yellow)' : 'transparent',
+                  border: '2px solid rgba(255,200,61,0.4)',
+                  boxShadow: i < pinInput.length ? '0 0 10px var(--brand-yellow)' : 'none',
+                  transition: 'all 0.15s'
+                }}
+              />
+            ))}
+          </div>
+
+          {authError && (
+            <p style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1.5rem', fontWeight: 'bold' }}>{authError}</p>
+          )}
+
+          {/* Premium Custom Keypad */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 75px)',
+            gap: '15px 20px',
+            justifyContent: 'center',
+            marginBottom: '2.5rem',
+            direction: 'ltr'
+          }}>
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+              <button 
+                key={num}
+                onClick={() => handleUnlockPin(num)}
+                style={{
+                  width: '75px',
+                  height: '75px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  color: '#fff',
+                  fontSize: '1.6rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s'
+                }}
+                onMouseDown={e => e.currentTarget.style.background = 'rgba(255,200,61,0.15)'}
+                onMouseUp={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+              >
+                {num}
+              </button>
+            ))}
+            
+            {/* Delete button */}
+            <button 
+              onClick={() => setPinInput(pinInput.slice(0, -1))}
+              style={{
+                width: '75px',
+                height: '75px',
+                borderRadius: '50%',
+                background: 'transparent',
+                border: 'none',
+                color: '#aaa',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                outline: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {lang === 'ar' ? 'حذف' : 'Delete'}
+            </button>
+
+            {/* Zero button */}
+            <button 
+              onClick={() => handleUnlockPin('0')}
+              style={{
+                width: '75px',
+                height: '75px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: '#fff',
+                fontSize: '1.6rem',
+                cursor: 'pointer',
+                outline: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseDown={e => e.currentTarget.style.background = 'rgba(255,200,61,0.15)'}
+              onMouseUp={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+            >
+              0
+            </button>
+
+            {/* Biometric trigger button */}
+            {currentUser.biometricsEnabled ? (
+              <button 
+                onClick={handleUnlockFingerprint}
+                style={{
+                  width: '75px',
+                  height: '75px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,200,61,0.08)',
+                  border: '1px solid rgba(255,200,61,0.2)',
+                  color: 'var(--brand-yellow)',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Fingerprint size={32} />
+              </button>
+            ) : (
+              <div />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Authorization & Payment Success Modal */}
+      {checkoutModal && currentUser && (
+        <div className="modal-overlay" style={{ zIndex: 30000 }} onClick={() => !checkoutSuccess && setCheckoutModal(false)}>
+          <div className="modal-content animate-zoom-in" style={{ maxWidth: '420px', background: '#090e1a', border: '1px solid rgba(255, 200, 61, 0.25)', padding: '2rem', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)' }} onClick={e => e.stopPropagation()}>
+            
+            {!checkoutSuccess ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3 style={{ color: 'var(--brand-yellow)', fontSize: '1.3rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={22} />
+                    {lang === 'ar' ? 'تأكيد عملية الدفع والشراء' : 'Confirm & Authorize Payment'}
+                  </h3>
+                  <button onClick={() => setCheckoutModal(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer', outline: 'none' }}>&times;</button>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem', color: '#888' }}>
+                    <span>{lang === 'ar' ? 'المشتري:' : 'Buyer:'}</span>
+                    <span style={{ color: '#fff', fontWeight: 'bold' }}>{currentUser.name}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem', color: '#888' }}>
+                    <span>{lang === 'ar' ? 'طريقة الدفع أونلاين:' : 'Online Payment Mode:'}</span>
+                    <span style={{ color: 'var(--brand-yellow)', fontWeight: 'bold' }}>{lang === 'ar' ? 'رصيد المحفظة المعتمدة' : 'Approved Wallet'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '8px', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                    <span style={{ color: '#fff' }}>{lang === 'ar' ? 'المبلغ الإجمالي:' : 'Total Amount:'}</span>
+                    <span style={{ color: 'var(--brand-yellow)' }}>
+                      ${cartItems.reduce((acc, item) => acc + item.selling_price_usd * (cart[item.id] || 1), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                <p style={{ color: '#aaa', fontSize: '0.85rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+                  {lang === 'ar' ? 'الرجاء كتابة رمز الـ PIN أو وضع بصمتك لتأكيد الشراء' : 'Please enter security PIN or use biometrics to authorize transaction'}
+                </p>
+
+                {/* PIN Code dots indicator for checkout */}
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '1.5rem', direction: 'ltr' }}>
+                  {Array.from({ length: currentUser.pin.length }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: i < checkoutPin.length ? 'var(--brand-yellow)' : 'transparent',
+                        border: '2px solid rgba(255,200,61,0.4)',
+                        boxShadow: i < checkoutPin.length ? '0 0 10px var(--brand-yellow)' : 'none',
+                        transition: 'all 0.15s'
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Custom Small Keypad */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 60px)',
+                  gap: '10px 15px',
+                  justifyContent: 'center',
+                  marginBottom: '1rem',
+                  direction: 'ltr'
+                }}>
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                    <button 
+                      key={num}
+                      onClick={() => handleCheckoutPinChange(num)}
+                      style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        color: '#fff',
+                        fontSize: '1.3rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button 
+                    onClick={() => setCheckoutPin(checkoutPin.slice(0, -1))}
+                    style={{ width: '60px', height: '60px', background: 'transparent', border: 'none', color: '#666', fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    {lang === 'ar' ? 'حذف' : 'Del'}
+                  </button>
+                  <button 
+                    onClick={() => handleCheckoutPinChange('0')}
+                    style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#fff', fontSize: '1.3rem', cursor: 'pointer' }}
+                  >
+                    0
+                  </button>
+                  {currentUser.biometricsEnabled ? (
+                    <button 
+                      onClick={handleCheckoutFingerprint}
+                      style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,200,61,0.1)', border: '1px solid rgba(255,200,61,0.2)', color: 'var(--brand-yellow)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Fingerprint size={24} />
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Payment Success Screen */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '1rem 0' }}>
+                <CheckCircle2 size={64} style={{ color: '#25D366', marginBottom: '1.2rem' }} />
+                <h3 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                  {lang === 'ar' ? 'تم الدفع والطلب بنجاح!' : 'Payment & Order Successful!'}
+                </h3>
+                <p style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                  {lang === 'ar' 
+                    ? 'لقد تم تأكيد دفعتك وتمرير طلبك للمستودع الإلكتروني لخدمتك بأسرع وقت.' 
+                    : 'Your payment has been successfully authorized and sent to the smart fulfillment warehouse.'}
+                </p>
+
+                <div style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#666' }}>{lang === 'ar' ? 'رقم العملية:' : 'Transaction ID:'}</span>
+                    <span style={{ color: '#fff', fontFamily: 'monospace' }}>TXN-{Math.floor(100000 + Math.random() * 900000)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#666' }}>{lang === 'ar' ? 'تاريخ العملية:' : 'Transaction Date:'}</span>
+                    <span style={{ color: '#fff' }}>{new Date().toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#666' }}>{lang === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                    <span style={{ color: '#25D366', fontWeight: 'bold' }}>{lang === 'ar' ? 'مقبول / مدفوع' : 'SUCCESS / PAID'}</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setCheckoutModal(false)}
+                  style={{ width: '100%', background: 'var(--brand-yellow)', color: '#0d1426', border: 'none', padding: '0.85rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {lang === 'ar' ? 'حسناً، إغلاق' : 'Okay, Close'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Simulated Fingerprint scanning modal */}
+      {isVerifyingBiometrics && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(3, 5, 10, 0.9)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 60000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          direction: lang === 'ar' ? 'rtl' : 'ltr'
+        }}>
+          <div style={{
+            position: 'relative',
+            width: '120px',
+            height: '120px',
+            borderRadius: '50%',
+            background: 'rgba(255,200,61,0.05)',
+            border: '2px solid rgba(255,200,61,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--brand-yellow)',
+            marginBottom: '1.5rem'
+          }}>
+            {/* Pulsing rings */}
+            <div style={{
+              position: 'absolute',
+              top: '-10px',
+              left: '-10px',
+              right: '-10px',
+              bottom: '-10px',
+              borderRadius: '50%',
+              border: '2px solid var(--brand-yellow)',
+              opacity: 0.3,
+              animation: 'biometricPulse 1.5s infinite'
+            }} />
+            <Fingerprint size={64} />
+          </div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '8px' }}>
+            {lang === 'ar' ? 'جاري التحقق من البصمة...' : 'Scanning Fingerprint...'}
+          </h3>
+          <p style={{ color: '#888', fontSize: '0.85rem' }}>
+            {lang === 'ar' ? 'ضع إصبعك على مستشعر البصمة في جهازك' : 'Place your finger on the device biometric scanner'}
+          </p>
+        </div>
+      )}
+
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
         <div className="modal-overlay" style={{ zIndex: 30000 }} onClick={() => setShowExitConfirm(false)}>
