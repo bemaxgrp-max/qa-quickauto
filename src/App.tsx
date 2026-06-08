@@ -679,31 +679,40 @@ export default function App() {
   }, [selectedItem, activeList, zoomedImage]);
 
   useEffect(() => {
-    // 1. Fetch latest exchange rate on mount
-    supabase
-      .from('catalog_exchange_rates')
-      .select('rate')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data: rateData, error }) => {
-        if (!error && rateData && rateData.rate) {
-          setExchangeRate(rateData.rate / 100);
-        } else {
-          // Fallback to exchange_rates if catalog_exchange_rates doesn't exist or is empty
-          supabase
-            .from('exchange_rates')
-            .select('rate')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-            .then(({ data: backupData }) => {
-              if (backupData && backupData.rate) {
-                setExchangeRate(backupData.rate / 100);
-              }
-            });
+    // 1. Fetch latest exchange rate on mount by comparing both tables and using the newer one
+    const loadExchangeRate = async () => {
+      try {
+        const { data: catData } = await supabase
+          .from('catalog_exchange_rates')
+          .select('rate, created_at')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const { data: mainData } = await supabase
+          .from('exchange_rates')
+          .select('rate, created_at')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let finalRate = 0;
+        const catTime = catData?.created_at ? new Date(catData.created_at).getTime() : 0;
+        const mainTime = mainData?.created_at ? new Date(mainData.created_at).getTime() : 0;
+
+        if (catTime > 0 || mainTime > 0) {
+          if (catTime >= mainTime && catData?.rate) {
+            finalRate = catData.rate / 100;
+          } else if (mainData?.rate) {
+            finalRate = mainData.rate / 100;
+          }
         }
-      });
+        setExchangeRate(finalRate);
+      } catch (e) {
+        console.error("Error loading exchange rate on mount:", e);
+      }
+    };
+    loadExchangeRate();
 
     // 2. Subscribe to realtime updates on catalog_exchange_rates and exchange_rates tables
     const channel = supabase.channel('catalog-exchange-rates-realtime')
