@@ -680,14 +680,27 @@ export default function App() {
 
   useEffect(() => {
     supabase
-      .from('exchange_rates')
+      .from('catalog_exchange_rates')
       .select('rate')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-      .then(({ data: rateData }) => {
-        if (rateData && rateData.rate) {
+      .then(({ data: rateData, error }) => {
+        if (!error && rateData && rateData.rate) {
           setExchangeRate(rateData.rate / 100);
+        } else {
+          // Fallback to exchange_rates if catalog_exchange_rates doesn't exist or is empty
+          supabase
+            .from('exchange_rates')
+            .select('rate')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: backupData }) => {
+              if (backupData && backupData.rate) {
+                setExchangeRate(backupData.rate / 100);
+              }
+            });
         }
       });
 
