@@ -8,6 +8,7 @@ import {
   CheckCircle2, UserPlus, Smartphone, Mail, Key
 } from 'lucide-react';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
 
 interface InventoryItem {
   id: string;
@@ -551,14 +552,53 @@ export default function App() {
     }
   };
 
-  const handleUnlockFingerprint = () => {
+  const performRealBiometricAuth = async (): Promise<boolean> => {
+    try {
+      if (isNativeApp) {
+        const info = await BiometricAuth.checkBiometry();
+        if (info.isAvailable) {
+          await BiometricAuth.authenticate({
+            reason: lang === 'ar' ? 'قم بتأكيد هويتك للمتابعة' : 'Verify your identity to continue',
+            cancelTitle: lang === 'ar' ? 'إلغاء' : 'Cancel'
+          });
+          return true;
+        }
+      }
+      
+      if (window.PublicKeyCredential) {
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            userVerification: "required",
+            timeout: 60000
+          }
+        });
+        return true;
+      } else {
+        alert(lang === 'ar' ? 'جهازك لا يدعم البصمة' : 'Your device does not support biometrics');
+        return false;
+      }
+    } catch (e: any) {
+      console.error("Biometric auth failed", e);
+      return false;
+    }
+  };
+
+  const handleUnlockFingerprint = async () => {
     setIsVerifyingBiometrics(true);
     setAuthError('');
-    setTimeout(() => {
-      setIsVerifyingBiometrics(false);
+    
+    const success = await performRealBiometricAuth();
+    setIsVerifyingBiometrics(false);
+    
+    if (success) {
       setIsLocked(false);
       setPinInput('');
-    }, 1500);
+    } else {
+      setAuthError(lang === 'ar' ? 'لم يتم التعرف على البصمة' : 'Fingerprint not recognized');
+    }
   };
 
   const handleCheckoutPinChange = (num: string) => {
@@ -579,14 +619,19 @@ export default function App() {
     }
   };
 
-  const handleCheckoutFingerprint = () => {
+  const handleCheckoutFingerprint = async () => {
     setIsVerifyingBiometrics(true);
-    setTimeout(() => {
-      setIsVerifyingBiometrics(false);
+    
+    const success = await performRealBiometricAuth();
+    setIsVerifyingBiometrics(false);
+    
+    if (success) {
       setCheckoutSuccess(true);
       setCart({});
       localStorage.removeItem('quickauto_cart');
-    }, 1500);
+    } else {
+      alert(lang === 'ar' ? 'فشل التحقق من البصمة' : 'Fingerprint verification failed');
+    }
   };
 
   const handleStartCheckout = () => {
