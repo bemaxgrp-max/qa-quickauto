@@ -1069,48 +1069,27 @@ export default function App() {
   }, [selectedItem, activeList, zoomedImage]);
 
   useEffect(() => {
-    // 1. Fetch latest exchange rate on mount by comparing both tables and using the newer one
+    // 1. Fetch latest exchange rate from the store's own exchange_rates table
     const loadExchangeRate = async () => {
       try {
-        const { data: catData } = await supabase
-          .from('catalog_exchange_rates')
-          .select('rate, created_at')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const { data: mainData } = await supabase
+        const { data } = await supabase
           .from('exchange_rates')
           .select('rate, created_at')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        let finalRate = 0;
-        const catTime = catData?.created_at ? new Date(catData.created_at).getTime() : 0;
-        const mainTime = mainData?.created_at ? new Date(mainData.created_at).getTime() : 0;
-
-        if (catTime > 0 || mainTime > 0) {
-          if (catTime >= mainTime && catData?.rate) {
-            finalRate = catData.rate / 100;
-          } else if (mainData?.rate) {
-            finalRate = mainData.rate / 100;
-          }
+        if (data?.rate) {
+          setExchangeRate(data.rate / 100);
         }
-        setExchangeRate(finalRate);
       } catch (e) {
         console.error("Error loading exchange rate on mount:", e);
       }
     };
     loadExchangeRate();
 
-    // 2. Subscribe to realtime updates on catalog_exchange_rates and exchange_rates tables
-    const channel = supabase.channel('catalog-exchange-rates-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'catalog_exchange_rates' }, (payload) => {
-        if (payload.new && payload.new.rate) {
-          setExchangeRate(payload.new.rate / 100);
-        }
-      })
+    // 2. Subscribe to realtime updates on exchange_rates table
+    const channel = supabase.channel('store-exchange-rates-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'exchange_rates' }, (payload) => {
         if (payload.new && payload.new.rate) {
           setExchangeRate(payload.new.rate / 100);
@@ -1234,8 +1213,8 @@ export default function App() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchSearch =
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.barcode.toLowerCase().includes(search.toLowerCase());
+        (item.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (item.barcode || '').toLowerCase().includes(search.toLowerCase());
       const matchCategory = matchesCategory(item, selectedCategory);
       return matchSearch && matchCategory;
     });
